@@ -1,5 +1,5 @@
 #include "MotorController.h"
-
+#include "motor_specs.h"
 MotorController& MotorController::getInstance() {
     static MotorController instance;
     return instance;
@@ -12,11 +12,12 @@ MotorController::MotorController()
       stepDelay(500),
       lastStepTime(0),
       stepCounter(0),
-      runCurrent(1000),    // Default 1000mA
-      holdCurrent(500),    // Default 500mA
-      speed(1000),         // Default 1000 steps/sec
-      acceleration(1000),  // Default 1000 steps/sec²
-      lastTempPrintTime(0) {}
+      runCurrent(MOTOR_P28SHD4611_12SK.operation.runCurrent),      // Default 1000mA
+      holdCurrent(MOTOR_P28SHD4611_12SK.operation.holdCurrent),    // Default 500mA
+      speed(MOTOR_P28SHD4611_12SK.operation.speed),                // Default 1000 steps/sec
+      acceleration(MOTOR_P28SHD4611_12SK.operation.acceleration),  // Default 1000 steps/sec²
+      lastTempPrintTime(0),
+      lastTemperature(0) {}
 
 void MotorController::begin() {
     setupPins();
@@ -99,6 +100,7 @@ void MotorController::moveForward() {
 
     isMoving  = true;
     direction = true;
+    digitalWrite(Config::TMC5160T_Driver::DIR_PIN, direction ? HIGH : LOW);
     Serial.println("Moving Forward");
 }
 
@@ -112,6 +114,7 @@ void MotorController::moveReverse() {
 
     isMoving  = true;
     direction = false;
+    digitalWrite(Config::TMC5160T_Driver::DIR_PIN, direction ? HIGH : LOW);
     Serial.println("Moving Reverse");
 }
 
@@ -306,6 +309,7 @@ void MotorController::printDriverStatus() {
 
 void MotorController::printDriverConfig() {
     Serial.println("\nDriver Configuration:");
+    Serial.println("-------------------");
     Serial.print("  Run Current: ");
     Serial.print(runCurrent);
     Serial.println("mA");
@@ -322,17 +326,22 @@ void MotorController::printDriverConfig() {
     Serial.println(" steps/sec²");
 
     Serial.println("\nDriver Parameters:");
-    Serial.print("  GCONF: 0x");
+    Serial.println("------------------");
+    Serial.print("  GCONF (Global Config): 0x");
     Serial.println(driver.GCONF(), HEX);
-    Serial.print("  TPOWERDOWN: ");
-    Serial.println(driver.TPOWERDOWN());
-    Serial.print("  TSTEP: ");
-    Serial.println(driver.TSTEP());
-    Serial.print("  TPWMTHRS: ");
-    Serial.println(driver.TPWMTHRS());
-    Serial.print("  THIGH: ");
-    Serial.println(driver.THIGH());
-    Serial.print("  XDIRECT: 0x");
+    Serial.print("  TPOWERDOWN (Power Down Time): ");
+    Serial.print(driver.TPOWERDOWN());
+    Serial.println(" tclk");
+    Serial.print("  TSTEP (Current Step Timing): ");
+    Serial.print(driver.TSTEP());
+    Serial.println(" tclk");
+    Serial.print("  TPWMTHRS (StealthChop Threshold): ");
+    Serial.print(driver.TPWMTHRS());
+    Serial.println(" tclk");
+    Serial.print("  THIGH (Step Pulse High Time): ");
+    Serial.print(driver.THIGH());
+    Serial.println(" tclk");
+    Serial.print("  XDIRECT (Direct Coil Control): 0x");
     Serial.println(driver.XDIRECT(), HEX);
 }
 
@@ -343,6 +352,9 @@ int MotorController::getTemperature() {
 
 void MotorController::printTemperature() {
     int temp = getTemperature();
-    Serial.print("Temperature: ");
-    Serial.println(temp);
+    if (temp != lastTemperature) {
+        Serial.print("Temperature: ");
+        Serial.println(temp);
+        lastTemperature = temp;
+    }
 }

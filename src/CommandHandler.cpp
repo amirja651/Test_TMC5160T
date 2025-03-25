@@ -22,56 +22,56 @@ void CommandHandler::retestSPI() {
 void CommandHandler::printCommandGuide() {
     Serial.println("\nCommand Guide:");
     Serial.println("Movement:");
-    Serial.println("  f -> Move Forward | r -> Move Reverse | s -> Stop");
-    Serial.println("Current Control:");
-    Serial.println("  +/- -> Increase/Decrease Run Current");
-    Serial.println("  h/l -> Increase/Decrease Hold Current");
+    Serial.println("  w -> Move Forward | s -> Move Reverse | x -> Stop");
+    Serial.println("\nCurrent Control:");
+    Serial.println("  q/e -> Increase/Decrease Run Current");
+    Serial.println("  a/d -> Increase/Decrease Hold Current");
     Serial.println("  c -> Show Current Settings");
-    Serial.println("Speed Control:");
-    Serial.println("  v/b -> Increase/Decrease Speed");
-    Serial.println("  a/z -> Increase/Decrease Acceleration");
-    Serial.println("  d -> Show Speed Settings");
-    Serial.println("Status & Diagnostics:");
+    Serial.println("\nSpeed Control:");
+    Serial.println("  r/f -> Increase/Decrease Speed");
+    Serial.println("  u/j -> Increase/Decrease Acceleration");
+    Serial.println("  v -> Show Speed Settings");
+    Serial.println("\nStatus & Diagnostics:");
     Serial.println("  i -> Show Detailed Driver Status");
     Serial.println("  p -> Show Driver Configuration");
     Serial.println("  m -> Show Temperature");
-    Serial.println("System:");
-    Serial.println("  x -> Reset Driver");
+    Serial.println("\nSystem:");
+    Serial.println("  z -> Reset Driver");
     Serial.println("  t -> Test SPI");
     Serial.println("  q -> Quit");
-    Serial.println("  h -> Show this guide\n");
+    Serial.println("  h or ? -> Show this guide\n");
 }
 
 void CommandHandler::processCommand(char cmd) {
     switch (cmd) {
-        case 'f':
+        case 'w':
             MotorController::getInstance().moveForward();
             Serial.println("Moving Forward");
             break;
-        case 'r':
+        case 's':
             MotorController::getInstance().moveReverse();
             Serial.println("Moving Reverse");
             break;
-        case 's':
+        case 'x':
             MotorController::getInstance().stop();
             Serial.println("Stopped");
             break;
-        case 'x':  // Reset driver
+        case 'z':  // Reset driver
             resetDriver();
             break;
         case 't':  // Test SPI
             retestSPI();
             break;
-        case '+':  // Increase run current
+        case 'q':  // Quit
             MotorController::getInstance().increaseRunCurrent();
             break;
-        case '-':  // Decrease run current
+        case 'e':  // Decrease run current
             MotorController::getInstance().decreaseRunCurrent();
             break;
-        case 'h':  // Increase hold current
+        case 'a':  // Increase hold current
             MotorController::getInstance().increaseHoldCurrent();
             break;
-        case 'l':  // Decrease hold current
+        case 'd':  // Decrease hold current
             MotorController::getInstance().decreaseHoldCurrent();
             break;
         case 'c':  // Print current settings
@@ -81,19 +81,19 @@ void CommandHandler::processCommand(char cmd) {
             Serial.print(MotorController::getInstance().getHoldCurrent());
             Serial.println("mA");
             break;
-        case 'v':  // Increase speed
+        case 'r':  // Increase speed
             MotorController::getInstance().increaseSpeed();
             break;
-        case 'b':  // Decrease speed
+        case 'f':  // Decrease speed
             MotorController::getInstance().decreaseSpeed();
             break;
-        case 'a':  // Increase acceleration
+        case 'u':  // Increase acceleration
             MotorController::getInstance().increaseAcceleration();
             break;
-        case 'z':  // Decrease acceleration
+        case 'j':  // Decrease acceleration
             MotorController::getInstance().decreaseAcceleration();
             break;
-        case 'd':  // Print speed settings
+        case 'v':  // Print speed settings
             Serial.print("Speed: ");
             Serial.print(MotorController::getInstance().getSpeed());
             Serial.print(" steps/sec, Acceleration: ");
@@ -106,15 +106,15 @@ void CommandHandler::processCommand(char cmd) {
         case 'p':  // Show driver configuration
             MotorController::getInstance().printDriverConfig();
             break;
-        case 'q':
-            MotorController::getInstance().stop();
-            Serial.println("Exiting...");
-            break;
         case 'm':
             MotorController::getInstance().printTemperature();
             break;
+        case '?':
+        case 'h':  // Show command guide
+            printCommandGuide();
+            break;
         default:
-            Serial.println("Invalid command. Type 'h' for help.");
+            Serial.println("Invalid command. Type 'h' or '?' for help.");
             break;
     }
 }

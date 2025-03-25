@@ -12,6 +12,7 @@ void setup() {
     Serial.println("SPI Test completed");
 
     MotorController::getInstance().begin();
+    CommandHandler::getInstance().printCommandGuide();
 }
 
 void loop() {

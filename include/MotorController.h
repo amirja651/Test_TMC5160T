@@ -86,6 +86,7 @@ private:
 
     static constexpr int TEMP_PRINT_INTERVAL = 1000;  // Print temperature every 1 second
     unsigned long        lastTempPrintTime;
+    int                  lastTemperature;
 };
 
 #endif

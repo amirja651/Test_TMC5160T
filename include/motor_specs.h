@@ -1,5 +1,6 @@
 #ifndef MOTOR_SPECS_H
 #define MOTOR_SPECS_H
+#pragma once
 
 #include <stdint.h>
 
@@ -25,10 +26,13 @@ struct MotorSpecs {
 
     // Operational parameters
     struct Operation {
-        const uint16_t stepsPerRev      = 200;     // steps per revolution
-        const float    recommendedSpeed = 200.0f;  // steps/s
-        const float    startupCurrent   = 0.3f;    // A (reduced current for startup)
-        const float    idleCurrent      = 0.25f;   // A (reduced current when idle)
+        const uint16_t stepsPerRev    = 200;    // steps per revolution
+        const float    startupCurrent = 0.3f;   // A (reduced current for startup)
+        const float    idleCurrent    = 0.25f;  // A (reduced current when idle)
+        const float    runCurrent     = 100;    // Default 1000mA
+        const float    holdCurrent    = 100;    // Default 500mA
+        const float    speed          = 200;    // Default 1000 steps/sec
+        const float    acceleration   = 500;    // Default 1000 steps/sec²
     } operation;
 
     // Electrical specifications
