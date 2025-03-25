@@ -57,7 +57,7 @@ void MotorController::configureDriver() {
     delay(100);
 
     // Configure CoolStep
-    driver.TPWMTHRS(500);    // Switch to SpreadCycle mode above 500 steps/sec
+    driver.TPWMTHRS(0);      // Enable StealthChop mode by default
     driver.TCOOLTHRS(1000);  // CoolStep threshold
     driver.TPOWERDOWN(10);   // Power down time after standstill
 
