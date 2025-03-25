@@ -21,8 +21,8 @@ void CommandHandler::retestSPI() {
 
 void CommandHandler::printCommandGuide() {
     Serial.println("\nCommand Guide:");
-    Serial.println("Movement:");
-    Serial.println("  w -> Move Forward | s -> Move Reverse | x -> Stop");
+    Serial.println("\nMovement:");
+    Serial.println("  w/s | x -> Move Forward/Reverse | Stop");
     Serial.println("\nCurrent Control:");
     Serial.println("  q/e -> Increase/Decrease Run Current");
     Serial.println("  a/d -> Increase/Decrease Hold Current");
@@ -38,8 +38,9 @@ void CommandHandler::printCommandGuide() {
     Serial.println("\nSystem:");
     Serial.println("  z -> Reset Driver");
     Serial.println("  t -> Test SPI");
-    Serial.println("  q -> Quit");
-    Serial.println("  h or ? -> Show this guide\n");
+    Serial.println("  h or ? -> Show this guide");
+    Serial.println("Motor Mode:");
+    Serial.println("  n -> Toggle StealthChop/SpreadCycle Mode");
 }
 
 void CommandHandler::processCommand(char cmd) {
@@ -62,7 +63,7 @@ void CommandHandler::processCommand(char cmd) {
         case 't':  // Test SPI
             retestSPI();
             break;
-        case 'q':  // Quit
+        case 'q':  // Decrease run current
             MotorController::getInstance().increaseRunCurrent();
             break;
         case 'e':  // Decrease run current
@@ -108,6 +109,9 @@ void CommandHandler::processCommand(char cmd) {
             break;
         case 'm':
             MotorController::getInstance().printTemperature();
+            break;
+        case 'n':  // Toggle StealthChop/SpreadCycle mode
+            MotorController::getInstance().toggleStealthChop();
             break;
         case '?':
         case 'h':  // Show command guide

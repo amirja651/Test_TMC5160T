@@ -56,10 +56,15 @@ void MotorController::configureDriver() {
     driver.microsteps(16);
     delay(100);
 
+    // Configure CoolStep
+    driver.TPWMTHRS(500);    // Switch to SpreadCycle mode above 500 steps/sec
+    driver.TCOOLTHRS(1000);  // CoolStep threshold
+    driver.TPOWERDOWN(10);   // Power down time after standstill
+
+    // Basic driver settings
     driver.toff(5);
     driver.blank_time(24);
     driver.iholddelay(6);
-    driver.TPOWERDOWN(10);
     delay(100);
 
     digitalWrite(Config::TMC5160T_Driver::EN_PIN, LOW);
@@ -137,6 +142,21 @@ void MotorController::update() {
     if (isMoving) {
         if (micros() - lastStepTime >= (1000000 / speed)) {
             step();
+        }
+
+        // Check for stall condition
+        checkStall();
+
+        // Monitor temperature and adjust current if needed
+        int temp = getTemperature();
+        if (temp > 60) {  // Temperature warning threshold
+            Serial.print("WARNING: High temperature detected: ");
+            Serial.println(temp);
+            // Reduce current by 20% if temperature is high
+            uint16_t reducedCurrent = runCurrent * 0.8;
+            driver.rms_current(reducedCurrent);
+            Serial.print("Reduced current to: ");
+            Serial.println(reducedCurrent);
         }
 
         // Print temperature every second
@@ -304,7 +324,90 @@ void MotorController::printDriverState(uint32_t status) {
 
 void MotorController::printDriverStatus() {
     uint32_t status = driver.DRV_STATUS();
-    printStatusRegister(status);
+
+    Serial.println("\n=== TMC5160 Driver Status Report ===");
+    Serial.println("=====================================");
+
+    // Basic Status
+    Serial.println("\n1. Basic Status:");
+    Serial.println("----------------");
+    Serial.print("  Raw Status Register: 0x");
+    Serial.println(status, HEX);
+
+    // Error Status
+    Serial.println("\n2. Error Status:");
+    Serial.println("----------------");
+    Serial.print("  Over Temperature: ");
+    Serial.println((status & 0x00000001) ? "WARNING - Temperature too high!" : "OK");
+    Serial.print("  Short to Ground A: ");
+    Serial.println((status & 0x00000002) ? "ERROR - Phase A shorted!" : "OK");
+    Serial.print("  Short to Ground B: ");
+    Serial.println((status & 0x00000004) ? "ERROR - Phase B shorted!" : "OK");
+    Serial.print("  Open Load A: ");
+    Serial.println((status & 0x00000008) ? "ERROR - Phase A open!" : "OK");
+    Serial.print("  Open Load B: ");
+    Serial.println((status & 0x00000010) ? "ERROR - Phase B open!" : "OK");
+
+    // StallGuard Status
+    Serial.println("\n3. StallGuard Status:");
+    Serial.println("---------------------");
+    Serial.print("  StallGuard Value: ");
+    Serial.println((status >> 10) & 0x3FF);
+    Serial.print("  Stall Detected: ");
+    Serial.println((status & 0x00000200) ? "WARNING - Motor stalled!" : "OK");
+
+    // Driver State
+    Serial.println("\n4. Driver State:");
+    Serial.println("----------------");
+    Serial.print("  Standstill: ");
+    Serial.println((status & 0x00000400) ? "Yes" : "No");
+    Serial.print("  Velocity Reached: ");
+    Serial.println((status & 0x00000800) ? "Yes" : "No");
+    Serial.print("  Position Reached: ");
+    Serial.println((status & 0x00001000) ? "Yes" : "No");
+
+    // Temperature
+    Serial.println("\n5. Temperature Status:");
+    Serial.println("----------------------");
+    int temp = getTemperature();
+    Serial.print("  Current Temperature: ");
+    Serial.print(temp);
+    Serial.println("°C");
+    if (temp > 60) {
+        Serial.println("  WARNING: Temperature above 60°C!");
+    } else if (temp > 45) {
+        Serial.println("  NOTE: Temperature is getting high");
+    }
+
+    // Operating Mode
+    Serial.println("\n6. Operating Mode:");
+    Serial.println("------------------");
+    Serial.print("  StealthChop Mode: ");
+    Serial.println((driver.TPWMTHRS() == 0) ? "Enabled" : "Disabled");
+    Serial.print("  SpreadCycle Mode: ");
+    Serial.println((driver.TPWMTHRS() > 0) ? "Enabled" : "Disabled");
+
+    // Current Settings
+    Serial.println("\n7. Current Settings:");
+    Serial.println("-------------------");
+    Serial.print("  Run Current: ");
+    Serial.print(runCurrent);
+    Serial.println("mA");
+    Serial.print("  Hold Current: ");
+    Serial.print(holdCurrent);
+    Serial.println("mA");
+
+    // Motion Settings
+    Serial.println("\n8. Motion Settings:");
+    Serial.println("-------------------");
+    Serial.print("  Speed: ");
+    Serial.print(speed);
+    Serial.println(" steps/sec");
+    Serial.print("  Acceleration: ");
+    Serial.print(acceleration);
+    Serial.println(" steps/sec²");
+
+    Serial.println("\n=====================================");
 }
 
 void MotorController::printDriverConfig() {
@@ -346,15 +449,39 @@ void MotorController::printDriverConfig() {
 }
 
 int MotorController::getTemperature() {
-    uint32_t status = driver.DRV_STATUS();
-    return (status >> 16) & 0xFF;  // Temperature is in bits 16-23
+    uint32_t status  = driver.DRV_STATUS();
+    int      rawTemp = (status >> 16) & 0xFF;  // Temperature is in bits 16-23
+    return (rawTemp - 1) * 1.5;                // Convert to actual temperature in Celsius
 }
 
 void MotorController::printTemperature() {
     int temp = getTemperature();
     if (temp != lastTemperature) {
         Serial.print("Temperature: ");
-        Serial.println(temp);
+        Serial.print(temp);
+        Serial.println("°C");
         lastTemperature = temp;
+    }
+}
+
+void MotorController::checkStall() {
+    uint32_t status = driver.DRV_STATUS();
+    if (status & 0x00000200) {  // Check stall bit
+        Serial.println("WARNING: Stall detected!");
+        stop();  // Stop motor on stall
+        printStallGuardStatus(status);
+    }
+}
+
+void MotorController::toggleStealthChop() {
+    uint32_t currentThreshold = driver.TPWMTHRS();
+    if (currentThreshold == 0) {
+        // Currently in StealthChop mode, switch to SpreadCycle
+        driver.TPWMTHRS(500);  // Switch to SpreadCycle above 500 steps/sec
+        Serial.println("Switched to SpreadCycle mode (more power, more noise)");
+    } else {
+        // Currently in SpreadCycle mode, switch to StealthChop
+        driver.TPWMTHRS(0);  // Enable StealthChop mode
+        Serial.println("Switched to StealthChop mode (silent operation)");
     }
 }

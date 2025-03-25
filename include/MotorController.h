@@ -40,6 +40,8 @@ public:
     int  getTemperature();
     void printTemperature();
 
+    void toggleStealthChop();
+
 private:
     MotorController();
     MotorController(const MotorController&)            = delete;
@@ -50,6 +52,7 @@ private:
     void step();
     bool checkAndReinitializeDriver();
     void handlePowerLoss();
+    void checkStall();
 
     TMC5160Stepper            driver;
     bool                      isMoving;
