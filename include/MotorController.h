@@ -6,90 +6,92 @@
 #include "SPIManager.h"
 #include "config.h"
 
+/**
+ * @brief Motor Controller class for managing TMC5160 stepper motor driver
+ *
+ * This class implements a singleton pattern to manage the TMC5160 stepper motor driver.
+ * It provides methods for motor control, current management, speed control, and status monitoring.
+ */
 class MotorController {
 public:
+    // Singleton instance access
     static MotorController& getInstance();
-    void                    begin();
-    void                    moveForward();
-    void                    moveReverse();
-    void                    stop();
-    void                    update();
-    uint32_t                getDriverStatus();
+
+    // Core motor control methods
+    void     begin();            // Initialize the motor controller
+    void     moveForward();      // Move motor in forward direction
+    void     moveReverse();      // Move motor in reverse direction
+    void     stop();             // Stop motor movement
+    void     update();           // Update motor state and check status
+    uint32_t getDriverStatus();  // Get current driver status
 
     // Current control methods
-    void     increaseRunCurrent();
-    void     decreaseRunCurrent();
-    void     increaseHoldCurrent();
-    void     decreaseHoldCurrent();
-    uint16_t getRunCurrent() const;
-    uint16_t getHoldCurrent() const;
+    void     increaseRunCurrent();    // Increase motor running current
+    void     decreaseRunCurrent();    // Decrease motor running current
+    void     increaseHoldCurrent();   // Increase motor holding current
+    void     decreaseHoldCurrent();   // Decrease motor holding current
+    uint16_t getRunCurrent() const;   // Get current running current value
+    uint16_t getHoldCurrent() const;  // Get current holding current value
 
     // Speed and acceleration control
-    void     increaseSpeed();
-    void     decreaseSpeed();
-    void     increaseAcceleration();
-    void     decreaseAcceleration();
-    uint16_t getSpeed() const;
-    uint16_t getAcceleration() const;
+    void     increaseSpeed();          // Increase motor speed
+    void     decreaseSpeed();          // Decrease motor speed
+    void     increaseAcceleration();   // Increase motor acceleration
+    void     decreaseAcceleration();   // Decrease motor acceleration
+    uint16_t getSpeed() const;         // Get current speed value
+    uint16_t getAcceleration() const;  // Get current acceleration value
 
     // Status and configuration methods
-    void printDriverStatus();
-    void printDriverConfig();
+    void printDriverStatus();  // Print current driver status
+    void printDriverConfig();  // Print current driver configuration
 
     // Temperature monitoring
-    int  getTemperature();
-    void printTemperature();
+    int  getTemperature();    // Get current driver temperature
+    void printTemperature();  // Print current temperature
 
-    void toggleStealthChop();
+    void toggleStealthChop();  // Toggle stealth chop mode
 
 private:
+    // Private constructor for singleton pattern
     MotorController();
+
+    // Delete copy constructor and assignment operator
     MotorController(const MotorController&)            = delete;
     MotorController& operator=(const MotorController&) = delete;
 
-    void configureDriver();
-    void setupPins();
-    void step();
-    bool checkAndReinitializeDriver();
-    void handlePowerLoss();
-    void checkStall();
+    // Internal configuration methods
+    void configureDriver();             // Configure driver parameters
+    void setupPins();                   // Setup GPIO pins
+    void step();                        // Execute single step
+    bool checkAndReinitializeDriver();  // Check and reinitialize driver if needed
+    void handlePowerLoss();             // Handle power loss situation
+    void checkStall();                  // Check for motor stall condition
 
-    TMC5160Stepper            driver;
-    bool                      isMoving;
-    bool                      direction;
-    const int                 stepDelay;
-    unsigned long             lastStepTime;
-    int                       stepCounter;
-    static constexpr int      STATUS_PRINT_INTERVAL = 1000;
-    static constexpr uint32_t INVALID_STATUS        = 0xFFFFFFFF;
+    // Driver instance and state variables
+    TMC5160Stepper driver;        // TMC5160 driver instance
+    bool           isMoving;      // Current movement state
+    bool           direction;     // Current movement direction
+    const int      stepDelay;     // Delay between steps
+    unsigned long  lastStepTime;  // Timestamp of last step
+    int            stepCounter;   // Step counter for status updates
 
-    // Current settings with motor specifications constraints
-    uint16_t                  runCurrent;
-    uint16_t                  holdCurrent;
-    static constexpr uint16_t CURRENT_STEP     = 100;   // mA
-    static constexpr uint16_t MIN_CURRENT      = 100;   // mA
-    static constexpr uint16_t MAX_RUN_CURRENT  = 1000;  // mA (1A max run current)
-    static constexpr uint16_t MAX_HOLD_CURRENT = 500;   // mA (0.5A max hold current)
+    // Current settings
+    uint16_t runCurrent;   // Current running current value
+    uint16_t holdCurrent;  // Current holding current value
 
     // Speed and acceleration settings
-    uint16_t                  speed;               // Steps per second
-    uint16_t                  acceleration;        // Steps per second squared
-    static constexpr uint16_t SPEED_STEP = 100;    // Steps/sec
-    static constexpr uint16_t ACCEL_STEP = 100;    // Steps/sec²
-    static constexpr uint16_t MIN_SPEED  = 100;    // Steps/sec
-    static constexpr uint16_t MAX_SPEED  = 10000;  // Steps/sec
-    static constexpr uint16_t MIN_ACCEL  = 100;    // Steps/sec²
-    static constexpr uint16_t MAX_ACCEL  = 10000;  // Steps/sec²
+    uint16_t speed;         // Current speed in steps per second
+    uint16_t acceleration;  // Current acceleration in steps per second squared
 
-    // Helper methods for status printing
-    void printStatusRegister(uint32_t status);
-    void printErrorFlags(uint32_t status);
-    void printStallGuardStatus(uint32_t status);
-    void printDriverState(uint32_t status);
+    // Status printing helper methods
+    void printStatusRegister(uint32_t status);    // Print driver status register
+    void printErrorFlags(uint32_t status);        // Print error flags
+    void printStallGuardStatus(uint32_t status);  // Print stall guard status
+    void printDriverState(uint32_t status);       // Print driver state
 
-    static constexpr int TEMP_PRINT_INTERVAL = 1000;  // Print temperature every 1 second
-    unsigned long        lastTempPrintTime;
-    int                  lastTemperature;
+    // Temperature monitoring variables
+    unsigned long lastTempPrintTime;  // Last temperature print timestamp
+    int           lastTemperature;    // Last recorded temperature
 };
 
 #endif

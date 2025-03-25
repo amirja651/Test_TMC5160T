@@ -1,24 +1,28 @@
 #include "MotorController.h"
-#include "motor_specs.h"
+#include "config.h"
+
+// Singleton instance getter
 MotorController& MotorController::getInstance() {
     static MotorController instance;
     return instance;
 }
 
+// Constructor initializes motor driver and sets default parameters
 MotorController::MotorController()
     : driver(Config::SPI::CS, Config::SPI::MOSI, Config::SPI::MISO, Config::SPI::SCK),
       isMoving(false),
       direction(true),
-      stepDelay(500),
+      stepDelay(Config::MotorController::STEP_DELAY),
       lastStepTime(0),
       stepCounter(0),
-      runCurrent(MOTOR_P28SHD4611_12SK.operation.runCurrent),      // Default 1000mA
-      holdCurrent(MOTOR_P28SHD4611_12SK.operation.holdCurrent),    // Default 500mA
-      speed(MOTOR_P28SHD4611_12SK.operation.speed),                // Default 1000 steps/sec
-      acceleration(MOTOR_P28SHD4611_12SK.operation.acceleration),  // Default 1000 steps/sec²
+      runCurrent(Config::MotorSpecs::Operation::RUN_CURRENT),      // Default 1000mA
+      holdCurrent(Config::MotorSpecs::Operation::HOLD_CURRENT),    // Default 500mA
+      speed(Config::MotorSpecs::Operation::SPEED),                // Default 1000 steps/sec
+      acceleration(Config::MotorSpecs::Operation::ACCELERATION),  // Default 1000 steps/sec²
       lastTempPrintTime(0),
       lastTemperature(0) {}
 
+// Initialize motor controller and driver
 void MotorController::begin() {
     setupPins();
     delay(100);  // Wait for power to stabilize
@@ -32,6 +36,7 @@ void MotorController::begin() {
     configureDriver();
 }
 
+// Configure GPIO pins for motor control
 void MotorController::setupPins() {
     pinMode(Config::TMC5160T_Driver::STEP_PIN, OUTPUT);
     pinMode(Config::TMC5160T_Driver::DIR_PIN, OUTPUT);
@@ -41,6 +46,7 @@ void MotorController::setupPins() {
     delay(200);
 }
 
+// Configure TMC5160 driver parameters
 void MotorController::configureDriver() {
     driver.begin();
     delay(200);
@@ -53,24 +59,25 @@ void MotorController::configureDriver() {
     driver.ihold(holdCurrent);
     delay(100);
 
-    driver.microsteps(16);
+    driver.microsteps(Config::TMC5160T_Driver::MICROSTEPS);
     delay(100);
 
-    // Configure CoolStep
-    driver.TPWMTHRS(0);      // Enable StealthChop mode by default
-    driver.TCOOLTHRS(1000);  // CoolStep threshold
-    driver.TPOWERDOWN(10);   // Power down time after standstill
+    // Configure CoolStep and basic driver settings
+    driver.TPWMTHRS(0);  // Enable StealthChop mode by default
+    driver.TCOOLTHRS(Config::TMC5160T_Driver::TCOOLTHRS);
+    driver.TPOWERDOWN(Config::TMC5160T_Driver::TPOWERDOWN);
 
-    // Basic driver settings
-    driver.toff(5);
-    driver.blank_time(24);
-    driver.iholddelay(6);
+    // Set driver timing parameters
+    driver.toff(Config::TMC5160T_Driver::TOFF);
+    driver.blank_time(Config::TMC5160T_Driver::BLANK_TIME);
+    driver.iholddelay(Config::TMC5160T_Driver::IHOLDDELAY);
     delay(100);
 
     digitalWrite(Config::TMC5160T_Driver::EN_PIN, LOW);
     delay(200);
 }
 
+// Handle power loss by reinitializing driver
 void MotorController::handlePowerLoss() {
     // Disable motor
     digitalWrite(Config::TMC5160T_Driver::EN_PIN, HIGH);
@@ -86,15 +93,17 @@ void MotorController::handlePowerLoss() {
     configureDriver();
 }
 
+// Check driver status and reinitialize if needed
 bool MotorController::checkAndReinitializeDriver() {
     uint32_t status = driver.DRV_STATUS();
-    if (status == 0 || status == INVALID_STATUS) {
+    if (status == 0 || status == Config::MotorController::INVALID_STATUS) {
         handlePowerLoss();
         return true;
     }
     return false;
 }
 
+// Start motor movement in forward direction
 void MotorController::moveForward() {
     uint32_t status = driver.DRV_STATUS();
     if (status & 0x00000001) {  // Check for drive voltage error (bit 0)
@@ -109,6 +118,7 @@ void MotorController::moveForward() {
     Serial.println("Moving Forward");
 }
 
+// Start motor movement in reverse direction
 void MotorController::moveReverse() {
     uint32_t status = driver.DRV_STATUS();
     if (status & 0x00000001) {  // Check for drive voltage error (bit 0)
@@ -123,21 +133,24 @@ void MotorController::moveReverse() {
     Serial.println("Moving Reverse");
 }
 
+// Stop motor movement
 void MotorController::stop() {
     isMoving = false;
 }
 
+// Execute a single step
 void MotorController::step() {
     digitalWrite(Config::TMC5160T_Driver::STEP_PIN, HIGH);
     delayMicroseconds(10);
     digitalWrite(Config::TMC5160T_Driver::STEP_PIN, LOW);
     lastStepTime = micros();
 
-    if (++stepCounter >= STATUS_PRINT_INTERVAL) {
+    if (++stepCounter >= Config::MotorController::STATUS_PRINT_INTERVAL) {
         stepCounter = 0;
     }
 }
 
+// Main update loop for motor control
 void MotorController::update() {
     if (isMoving) {
         if (micros() - lastStepTime >= (1000000 / speed)) {
@@ -149,7 +162,7 @@ void MotorController::update() {
 
         // Monitor temperature and adjust current if needed
         int temp = getTemperature();
-        if (temp > 60) {  // Temperature warning threshold
+        if (temp > Config::TMC5160T_Driver::TEMP_WARNING_THRESHOLD) {
             Serial.print("WARNING: High temperature detected: ");
             Serial.println(temp);
             // Reduce current by 20% if temperature is high
@@ -159,8 +172,8 @@ void MotorController::update() {
             Serial.println(reducedCurrent);
         }
 
-        // Print temperature every second
-        if (millis() - lastTempPrintTime >= TEMP_PRINT_INTERVAL) {
+        // Print temperature at configured interval
+        if (millis() - lastTempPrintTime >= Config::TMC5160T_Driver::TEMP_PRINT_INTERVAL) {
             printTemperature();
             lastTempPrintTime = millis();
         }
@@ -172,8 +185,8 @@ uint32_t MotorController::getDriverStatus() {
 }
 
 void MotorController::increaseRunCurrent() {
-    if (runCurrent < MAX_RUN_CURRENT) {
-        runCurrent += CURRENT_STEP;
+    if (runCurrent < Config::MotorController::MAX_RUN_CURRENT) {
+        runCurrent += Config::MotorController::CURRENT_STEP;
         driver.rms_current(runCurrent);
         Serial.print("Run current increased to: ");
         Serial.print(runCurrent);
@@ -184,8 +197,8 @@ void MotorController::increaseRunCurrent() {
 }
 
 void MotorController::decreaseRunCurrent() {
-    if (runCurrent > MIN_CURRENT) {
-        runCurrent -= CURRENT_STEP;
+    if (runCurrent > Config::MotorController::MIN_CURRENT) {
+        runCurrent -= Config::MotorController::CURRENT_STEP;
         driver.rms_current(runCurrent);
         Serial.print("Run current decreased to: ");
         Serial.print(runCurrent);
@@ -196,8 +209,8 @@ void MotorController::decreaseRunCurrent() {
 }
 
 void MotorController::increaseHoldCurrent() {
-    if (holdCurrent < MAX_HOLD_CURRENT) {
-        holdCurrent += CURRENT_STEP;
+    if (holdCurrent < Config::MotorController::MAX_HOLD_CURRENT) {
+        holdCurrent += Config::MotorController::CURRENT_STEP;
         driver.ihold(holdCurrent);
         Serial.print("Hold current increased to: ");
         Serial.print(holdCurrent);
@@ -208,8 +221,8 @@ void MotorController::increaseHoldCurrent() {
 }
 
 void MotorController::decreaseHoldCurrent() {
-    if (holdCurrent > MIN_CURRENT) {
-        holdCurrent -= CURRENT_STEP;
+    if (holdCurrent > Config::MotorController::MIN_CURRENT) {
+        holdCurrent -= Config::MotorController::CURRENT_STEP;
         driver.ihold(holdCurrent);
         Serial.print("Hold current decreased to: ");
         Serial.print(holdCurrent);
@@ -228,8 +241,8 @@ uint16_t MotorController::getHoldCurrent() const {
 }
 
 void MotorController::increaseSpeed() {
-    if (speed < MAX_SPEED) {
-        speed += SPEED_STEP;
+    if (speed < Config::MotorController::MAX_SPEED) {
+        speed += Config::MotorController::SPEED_STEP;
         Serial.print("Speed increased to: ");
         Serial.print(speed);
         Serial.println(" steps/sec");
@@ -239,8 +252,8 @@ void MotorController::increaseSpeed() {
 }
 
 void MotorController::decreaseSpeed() {
-    if (speed > MIN_SPEED) {
-        speed -= SPEED_STEP;
+    if (speed > Config::MotorController::MIN_SPEED) {
+        speed -= Config::MotorController::SPEED_STEP;
         Serial.print("Speed decreased to: ");
         Serial.print(speed);
         Serial.println(" steps/sec");
@@ -250,8 +263,8 @@ void MotorController::decreaseSpeed() {
 }
 
 void MotorController::increaseAcceleration() {
-    if (acceleration < MAX_ACCEL) {
-        acceleration += ACCEL_STEP;
+    if (acceleration < Config::MotorController::MAX_ACCEL) {
+        acceleration += Config::MotorController::ACCEL_STEP;
         driver.AMAX(acceleration);
         Serial.print("Acceleration increased to: ");
         Serial.print(acceleration);
@@ -262,8 +275,8 @@ void MotorController::increaseAcceleration() {
 }
 
 void MotorController::decreaseAcceleration() {
-    if (acceleration > MIN_ACCEL) {
-        acceleration -= ACCEL_STEP;
+    if (acceleration > Config::MotorController::MIN_ACCEL) {
+        acceleration -= Config::MotorController::ACCEL_STEP;
         driver.AMAX(acceleration);
         Serial.print("Acceleration decreased to: ");
         Serial.print(acceleration);
@@ -464,15 +477,17 @@ void MotorController::printTemperature() {
     }
 }
 
+// Check for motor stall condition
 void MotorController::checkStall() {
     uint32_t status = driver.DRV_STATUS();
-    if (status & 0x00000200) {  // Check stall bit
+    if (status & Config::TMC5160T_Driver::STALL_BIT_MASK) {
         Serial.println("WARNING: Stall detected!");
         stop();  // Stop motor on stall
         printStallGuardStatus(status);
     }
 }
 
+// Toggle between StealthChop and SpreadCycle modes
 void MotorController::toggleStealthChop() {
     uint32_t currentThreshold = driver.TPWMTHRS();
     if (currentThreshold == 0) {
