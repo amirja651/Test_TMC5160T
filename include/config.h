@@ -4,6 +4,23 @@
 #include <stdint.h>
 
 namespace ESP32Pins {
+    // Right Side Pins (Top to Bottom)
+    struct RightSide {
+        static const uint8_t GPIO23 = 23;  // MOSI, V_SPI_D
+        static const uint8_t GPIO22 = 22;  // V_SPI_WP
+        static const uint8_t GPIO1  = 1;   // TX0
+        static const uint8_t GPIO3  = 3;   // RX0
+        static const uint8_t GPIO21 = 21;  // V_SPI_HD
+        static const uint8_t GPIO19 = 19;  // MISO, V_SPI_Q
+        static const uint8_t GPIO18 = 18;  // SCK, V_SPI_CLK
+        static const uint8_t GPIO5  = 5;   // V_SPI_CS0
+        static const uint8_t GPIO17 = 17;  // TX2
+        static const uint8_t GPIO16 = 16;  // RX2
+        static const uint8_t GPIO4  = 4;   // ADC2_0, Touch0
+        static const uint8_t GPIO2  = 2;   // ADC2_2, Touch2
+        static const uint8_t GPIO15 = 15;  // ADC2_3, Touch3
+    };
+
     // Left Side Pins (Top to Bottom)
     struct LeftSide {
         // Input only pins
@@ -21,23 +38,6 @@ namespace ESP32Pins {
         static const uint8_t GPIO12 = 12;  // ADC2_5, Touch5
         static const uint8_t GPIO13 = 13;  // ADC2_4, Touch4
     };
-
-    // Right Side Pins (Top to Bottom)
-    struct RightSide {
-        static const uint8_t GPIO23 = 23;  // MOSI, V_SPI_D
-        static const uint8_t GPIO22 = 22;  // V_SPI_WP
-        static const uint8_t GPIO1  = 1;   // TX0
-        static const uint8_t GPIO3  = 3;   // RX0
-        static const uint8_t GPIO21 = 21;  // V_SPI_HD
-        static const uint8_t GPIO19 = 19;  // MISO, V_SPI_Q
-        static const uint8_t GPIO18 = 18;  // SCK, V_SPI_CLK
-        static const uint8_t GPIO5  = 5;   // V_SPI_CS0
-        static const uint8_t GPIO17 = 17;  // TX2
-        static const uint8_t GPIO16 = 16;  // RX2
-        static const uint8_t GPIO4  = 4;   // ADC2_0, Touch0
-        static const uint8_t GPIO2  = 2;   // ADC2_2, Touch2
-        static const uint8_t GPIO15 = 15;  // ADC2_3, Touch3
-    };
 };  // namespace ESP32Pins
 
 namespace Config {
@@ -49,19 +49,43 @@ namespace Config {
 
     // SPI Configuration
     struct SPI {
-        static const uint8_t MOSI = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
-        static const uint8_t MISO = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
-        static const uint8_t SCK  = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
-        static const uint8_t CS   = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
-        static const uint8_t TEST_VALUE =
-            0x55;  // Test pattern for SPI communication (alternating 1s and 0s)
+        static const uint8_t MOSI       = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
+        static const uint8_t MISO       = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
+        static const uint8_t SCK        = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
+        static const uint8_t CS         = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
+        static const uint8_t TEST_VALUE = 0x55;  // Test pattern for SPI communication (alternating 1s and 0s)
     };
 
     // TMC5160 Motor Control Configuration
     struct TMC5160T_Driver {
-        static const uint8_t STEP_PIN = ESP32Pins::RightSide::GPIO4;   // ADC2_0, Touch0
-        static const uint8_t DIR_PIN  = ESP32Pins::RightSide::GPIO2;   // ADC2_2, Touch2
-        static const uint8_t EN_PIN   = ESP32Pins::RightSide::GPIO15;  // ADC2_3, Touch3
+        // Common pins for all motors
+        static const uint8_t MOSI = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
+        static const uint8_t MISO = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
+        static const uint8_t SCK  = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
+
+        // Motor 1 pins
+        static const uint8_t D1_CS       = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
+        static const uint8_t D1_STEP_PIN = ESP32Pins::RightSide::GPIO4;   // ADC2_0, Touch0
+        static const uint8_t D1_DIR_PIN  = ESP32Pins::RightSide::GPIO2;   // ADC2_2, Touch2
+        static const uint8_t D1_EN_PIN   = ESP32Pins::RightSide::GPIO15;  // ADC2_3, Touch3
+
+        // Motor 2 pins
+        static const uint8_t D2_CS       = ESP32Pins::RightSide::GPIO16;  // V_SPI_CS1
+        static const uint8_t D2_STEP_PIN = ESP32Pins::RightSide::GPIO17;  // ADC2_1, Touch1
+        static const uint8_t D2_DIR_PIN  = ESP32Pins::RightSide::GPIO21;  // ADC2_5, Touch5
+        static const uint8_t D2_EN_PIN   = ESP32Pins::RightSide::GPIO22;  // ADC2_6, Touch6
+
+        // Motor 3 pins
+        static const uint8_t D3_CS       = ESP32Pins::LeftSide::GPIO13;  // V_SPI_CS2
+        static const uint8_t D3_STEP_PIN = ESP32Pins::LeftSide::GPIO12;  // ADC2_4, Touch4
+        static const uint8_t D3_DIR_PIN  = ESP32Pins::LeftSide::GPIO14;  // ADC2_7, Touch7
+        static const uint8_t D3_EN_PIN   = ESP32Pins::LeftSide::GPIO27;  // ADC2_8, Touch8
+
+        // Motor 4 pins
+        static const uint8_t D4_CS       = ESP32Pins::LeftSide::GPIO25;  // V_SPI_CS3
+        static const uint8_t D4_STEP_PIN = ESP32Pins::LeftSide::GPIO26;  // ADC2_9, Touch9
+        static const uint8_t D4_DIR_PIN  = ESP32Pins::LeftSide::GPIO33;  // ADC2_10, Touch10
+        static const uint8_t D4_EN_PIN   = ESP32Pins::LeftSide::GPIO32;  // ADC2_11, Touch11
 
         // Motor driver settings
         static const uint16_t TMC_CURRENT_MA = 1000;  // Motor RMS current in mA
@@ -73,9 +97,9 @@ namespace Config {
         static const uint16_t MAX_CURRENT_MA  = 2000;  // Maximum allowed current in mA
 
         // Speed control settings
-        static const uint32_t SPEED_STEP = 100;  // Speed adjustment step size in steps/sec
-        static const uint32_t ACCEL_STEP = 50;   // Acceleration adjustment step size in steps/sec²
-        static const uint32_t MIN_SPEED  = 100;  // Minimum speed in steps/sec
+        static const uint32_t SPEED_STEP = 100;    // Speed adjustment step size in steps/sec
+        static const uint32_t ACCEL_STEP = 50;     // Acceleration adjustment step size in steps/sec²
+        static const uint32_t MIN_SPEED  = 100;    // Minimum speed in steps/sec
         static const uint32_t MAX_SPEED  = 10000;  // Maximum speed in steps/sec
 
         // Temperature monitoring settings
@@ -124,8 +148,8 @@ namespace Config {
     // Motor Controller Configuration
     struct MotorController {
         // Status monitoring settings
-        static constexpr int      STATUS_PRINT_INTERVAL = 1000;  // Status print interval in steps
-        static constexpr uint32_t INVALID_STATUS = 0xFFFFFFFF;   // Invalid driver status value
+        static constexpr int      STATUS_PRINT_INTERVAL = 1000;        // Status print interval in steps
+        static constexpr uint32_t INVALID_STATUS        = 0xFFFFFFFF;  // Invalid driver status value
 
         // Current settings with motor specifications constraints
         static constexpr uint16_t CURRENT_STEP     = 100;   // Current adjustment step size in mA
@@ -134,13 +158,12 @@ namespace Config {
         static constexpr uint16_t MAX_HOLD_CURRENT = 500;   // Maximum hold current in mA (0.5A max)
 
         // Speed and acceleration settings
-        static constexpr uint16_t SPEED_STEP = 100;  // Speed adjustment step size in steps/sec
-        static constexpr uint16_t ACCEL_STEP =
-            100;  // Acceleration adjustment step size in steps/sec²
-        static constexpr uint16_t MIN_SPEED = 100;    // Minimum speed in steps/sec
-        static constexpr uint16_t MAX_SPEED = 10000;  // Maximum speed in steps/sec
-        static constexpr uint16_t MIN_ACCEL = 100;    // Minimum acceleration in steps/sec²
-        static constexpr uint16_t MAX_ACCEL = 10000;  // Maximum acceleration in steps/sec²
+        static constexpr uint16_t SPEED_STEP = 100;    // Speed adjustment step size in steps/sec
+        static constexpr uint16_t ACCEL_STEP = 100;    // Acceleration adjustment step size in steps/sec²
+        static constexpr uint16_t MIN_SPEED  = 100;    // Minimum speed in steps/sec
+        static constexpr uint16_t MAX_SPEED  = 10000;  // Maximum speed in steps/sec
+        static constexpr uint16_t MIN_ACCEL  = 100;    // Minimum acceleration in steps/sec²
+        static constexpr uint16_t MAX_ACCEL  = 10000;  // Maximum acceleration in steps/sec²
 
         // Timing settings
         static constexpr int STEP_DELAY          = 500;   // Step pulse delay in microseconds
@@ -161,14 +184,11 @@ namespace Config {
 
         // Motor constraints for pancake type
         struct Constraints {
-            static constexpr float MAX_TEMPERATURE =
-                50.0f;  // default: 80 °C (Class B insulation limit)
-            static constexpr float MAX_CURRENT = 0.55f;  // A (10% safety margin)
-            static constexpr float MIN_VOLTAGE = 2.0f;   // V (minimum operating voltage)
-            static constexpr float MAX_ACCELERATION =
-                500.0f;  // default: 1000 steps/s² (for smooth operation)
-            static constexpr float MAX_SPEED =
-                250.0f;  // default: 500 steps/s (for stable operation)
+            static constexpr float MAX_TEMPERATURE  = 50.0f;   // default: 80 °C (Class B insulation limit)
+            static constexpr float MAX_CURRENT      = 0.55f;   // A (10% safety margin)
+            static constexpr float MIN_VOLTAGE      = 2.0f;    // V (minimum operating voltage)
+            static constexpr float MAX_ACCELERATION = 500.0f;  // default: 1000 steps/s² (for smooth operation)
+            static constexpr float MAX_SPEED        = 250.0f;  // default: 500 steps/s (for stable operation)
         };
 
         // Operational parameters

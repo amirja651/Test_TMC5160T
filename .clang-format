@@ -1,32 +1,32 @@
 ---
 Language: Cpp
-# بر اساس کد ESP32 Motion Control System
+# Based on ESP32 Motion Control System code
 BasedOnStyle: Google
 
-# تنظیمات اصلی
+# Basic settings
 AccessModifierOffset: -4
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
-ColumnLimit: 100
+ColumnLimit: 120
 
-# براکت‌ها
+# Brackets
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterClass: false
-  AfterControlStatement: false
-  AfterEnum: false
-  AfterFunction: false
-  AfterNamespace: false
-  AfterStruct: false
-  AfterUnion: false
-  BeforeCatch: false
-  BeforeElse: false
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
+AfterClass: false
+AfterControlStatement: false
+AfterEnum: false
+AfterFunction: false
+AfterNamespace: false
+AfterStruct: false
+AfterUnion: false
+BeforeCatch: false
+BeforeElse: false
+IndentBraces: false
+SplitEmptyFunction: false
+SplitEmptyRecord: false
 
-# تورفتگی و فاصله‌گذاری
+# Indentation and spacing
 IndentCaseLabels: true
 NamespaceIndentation: All
 FixNamespaceComments: true
@@ -41,7 +41,7 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 
-# ویژگی‌های خاص برای پروژه‌های Embedded
+# Special features for Embedded projects
 AlignConsecutiveMacros: true
 AlignEscapedNewlines: Right
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -55,7 +55,7 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 PointerAlignment: Left
 
-# فرمت کدهای اصلی
+# The format of the original codes
 SortIncludes: true
 SortUsingDeclarations: true
 IncludeBlocks: Preserve

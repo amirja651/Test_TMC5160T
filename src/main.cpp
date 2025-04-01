@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "CommandHandler.h"
-#include "MotorController.h"
-#include "SPIManager.h"
+#include "MultiMotorController.h"
 #include "config.h"
 
 /**
@@ -9,17 +8,17 @@
  * Configures serial communication, SPI interface, and motor controller
  */
 void setup() {
-    // Initialize serial communication for command interface
-    Serial.begin(Config::System::SERIAL_BAUD_RATE);
-    delay(Config::System::STARTUP_DELAY_MS);  // Startup delay for stability
+    Serial.begin(115200);
+    delay(1000);  // Wait for serial to initialize
 
-    // Initialize and test SPI communication
-    SPIManager::getInstance().begin();
-    SPIManager::getInstance().testCommunication();
-    Serial.println("SPI Test completed");
+    // Initialize controller for 4 motors
+    MultiMotorController::getInstance().begin();
 
-    // Initialize motor controller and display command guide
-    MotorController::getInstance().begin();
+    // Control individual motors
+    MultiMotorController::getInstance().moveForward(0);  // Move first motor forward
+    MultiMotorController::getInstance().moveReverse(1);  // Move second motor in reverse
+
+    // Display command guide
     CommandHandler::getInstance().printCommandGuide();
 }
 
@@ -35,5 +34,5 @@ void loop() {
     }
 
     // Update motor controller state
-    MotorController::getInstance().update();
+    MultiMotorController::getInstance().update();
 }

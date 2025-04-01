@@ -2,8 +2,7 @@
 #define COMMAND_HANDLER_H
 
 #include <Arduino.h>
-#include "MotorController.h"
-#include "SPIManager.h"
+#include "MultiMotorController.h"
 
 /**
  * @brief Command Handler class for processing user input commands
