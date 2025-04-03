@@ -1,22 +1,24 @@
 #include "MotorController.h"
 #include "config.h"
 
-// Singleton instance getter
-MotorController& MotorController::getInstance() {
-    static MotorController instance;
-    return instance;
-}
-
 // Constructor initializes motor driver and sets default parameters
-MotorController::MotorController()
-    : driver(Config::SPI::CS, Config::SPI::MOSI, Config::SPI::MISO, Config::SPI::SCK),
+MotorController::MotorController(uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
+                                 uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)
+    : driver(csPin, mosiPin, misoPin, sckPin),
       isMoving(false),
       direction(true),
       stepDelay(Config::MotorController::STEP_DELAY),
       lastStepTime(0),
       stepCounter(0),
-      runCurrent(Config::MotorSpecs::Operation::RUN_CURRENT),      // Default 1000mA
-      holdCurrent(Config::MotorSpecs::Operation::HOLD_CURRENT),    // Default 500mA
+      csPin(csPin),
+      stepPin(stepPin),
+      dirPin(dirPin),
+      enPin(enPin),
+      mosiPin(mosiPin),
+      misoPin(misoPin),
+      sckPin(sckPin),
+      runCurrent(Config::MotorSpecs::Operation::RUN_CURRENT),     // Default 1000mA
+      holdCurrent(Config::MotorSpecs::Operation::HOLD_CURRENT),   // Default 500mA
       speed(Config::MotorSpecs::Operation::SPEED),                // Default 1000 steps/sec
       acceleration(Config::MotorSpecs::Operation::ACCELERATION),  // Default 1000 steps/sec²
       lastTempPrintTime(0),
@@ -26,11 +28,12 @@ MotorController::MotorController()
 void MotorController::begin() {
     setupPins();
     delay(100);  // Wait for power to stabilize
+    disableSPI();
 
     // Reset driver state
-    digitalWrite(Config::TMC5160T_Driver::EN_PIN, HIGH);
+    disableDriver();
     delay(100);
-    digitalWrite(Config::TMC5160T_Driver::EN_PIN, LOW);
+    enableDriver();
     delay(100);
 
     configureDriver();
@@ -38,12 +41,14 @@ void MotorController::begin() {
 
 // Configure GPIO pins for motor control
 void MotorController::setupPins() {
-    pinMode(Config::TMC5160T_Driver::STEP_PIN, OUTPUT);
-    pinMode(Config::TMC5160T_Driver::DIR_PIN, OUTPUT);
-    pinMode(Config::TMC5160T_Driver::EN_PIN, OUTPUT);
+    pinMode(stepPin, OUTPUT);
+    pinMode(dirPin, OUTPUT);
+    pinMode(enPin, OUTPUT);
+    pinMode(csPin, OUTPUT);
 
-    digitalWrite(Config::TMC5160T_Driver::EN_PIN, HIGH);
+    disableDriver();
     delay(200);
+    enableDriver();
 }
 
 // Configure TMC5160 driver parameters
@@ -73,20 +78,20 @@ void MotorController::configureDriver() {
     driver.iholddelay(Config::TMC5160T_Driver::IHOLDDELAY);
     delay(100);
 
-    digitalWrite(Config::TMC5160T_Driver::EN_PIN, LOW);
+    enableDriver();
     delay(200);
 }
 
 // Handle power loss by reinitializing driver
 void MotorController::handlePowerLoss() {
     // Disable motor
-    digitalWrite(Config::TMC5160T_Driver::EN_PIN, HIGH);
+    disableDriver();
     delay(100);
 
     // Reset SPI communication
-    SPIManager::getInstance().deselectDevice();
+    disableSPI();
     delay(100);
-    SPIManager::getInstance().selectDevice();
+    enableSPI();
     delay(100);
 
     // Reconfigure driver
@@ -114,7 +119,7 @@ void MotorController::moveForward() {
 
     isMoving  = true;
     direction = true;
-    digitalWrite(Config::TMC5160T_Driver::DIR_PIN, direction ? HIGH : LOW);
+    digitalWrite(dirPin, direction ? HIGH : LOW);
     Serial.println("Moving Forward");
 }
 
@@ -129,7 +134,7 @@ void MotorController::moveReverse() {
 
     isMoving  = true;
     direction = false;
-    digitalWrite(Config::TMC5160T_Driver::DIR_PIN, direction ? HIGH : LOW);
+    digitalWrite(dirPin, direction ? HIGH : LOW);
     Serial.println("Moving Reverse");
 }
 
@@ -140,9 +145,9 @@ void MotorController::stop() {
 
 // Execute a single step
 void MotorController::step() {
-    digitalWrite(Config::TMC5160T_Driver::STEP_PIN, HIGH);
+    digitalWrite(stepPin, HIGH);
     delayMicroseconds(10);
-    digitalWrite(Config::TMC5160T_Driver::STEP_PIN, LOW);
+    digitalWrite(stepPin, LOW);
     lastStepTime = micros();
 
     if (++stepCounter >= Config::MotorController::STATUS_PRINT_INTERVAL) {
@@ -499,4 +504,54 @@ void MotorController::toggleStealthChop() {
         driver.TPWMTHRS(0);  // Enable StealthChop mode
         Serial.println("Switched to StealthChop mode (silent operation)");
     }
+}
+
+// Performs a basic SPI communication test by sending a test pattern
+bool MotorController::testCommunication() {
+    uint32_t status = driver.DRV_STATUS();
+    if (status != 0xffffffff) {
+        Serial.println("Status: 0x");
+        Serial.println(status, HEX);
+        return true;
+    }
+    return false;
+}
+
+// Activates the SPI device by setting CS pin low
+void MotorController::enableSPI() {
+    digitalWrite(csPin, LOW);
+}
+
+// Deactivates the SPI device by setting CS pin high
+void MotorController::disableSPI() {
+    digitalWrite(csPin, HIGH);
+}
+
+// Performs a single byte SPI transfer
+uint8_t MotorController::transfer(uint8_t data) {
+    return SPI.transfer(data);
+}
+
+void MotorController::enableDriver() {
+    digitalWrite(enPin, LOW);
+}
+
+void MotorController::disableDriver() {
+    digitalWrite(enPin, HIGH);
+}
+
+void MotorController::stepHigh() {
+    digitalWrite(stepPin, HIGH);
+}
+
+void MotorController::stepLow() {
+    digitalWrite(stepPin, LOW);
+}
+
+void MotorController::dirHigh() {
+    digitalWrite(dirPin, HIGH);
+}
+
+void MotorController::dirLow() {
+    digitalWrite(dirPin, LOW);
 }

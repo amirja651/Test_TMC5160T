@@ -2,20 +2,31 @@
 #define MOTOR_CONTROLLER_H
 
 #include <Arduino.h>
+#include <SPI.h>
 #include <TMCStepper.h>
-#include "SPIManager.h"
 #include "config.h"
 
 /**
  * @brief Motor Controller class for managing TMC5160 stepper motor driver
  *
- * This class implements a singleton pattern to manage the TMC5160 stepper motor driver.
- * It provides methods for motor control, current management, speed control, and status monitoring.
+ * This class implements a controller for the TMC5160 stepper motor driver.
+ * Multiple instances can be created, each controlling a separate motor.
  */
 class MotorController {
 public:
-    // Singleton instance access
-    static MotorController& getInstance();
+    /**
+     * @brief Constructor for MotorController
+     * @param csPin Chip select pin for this motor
+     * @param stepPin Step pin for this motor
+     * @param dirPin Direction pin for this motor
+     * @param enPin Enable pin for this motor
+     * @param mosiPin MOSI pin for SPI (optional, defaults to Config::SPI::MOSI)
+     * @param misoPin MISO pin for SPI (optional, defaults to Config::SPI::MISO)
+     * @param sckPin SCK pin for SPI (optional, defaults to Config::SPI::SCK)
+     */
+    MotorController(uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
+                    uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
+                    uint8_t sckPin = Config::SPI::SCK);
 
     // Core motor control methods
     void     begin();            // Initialize the motor controller
@@ -51,14 +62,61 @@ public:
 
     void toggleStealthChop();  // Toggle stealth chop mode
 
+    /**
+     * @brief Performs a basic SPI communication test
+     * Sends a test pattern (0x55) to verify SPI communication
+     * @return true if communication is successful, false otherwise
+     */
+    bool testCommunication();
+
+    /**
+     * @brief Performs a single byte SPI transfer
+     * @param data The byte to send over SPI
+     * @return The byte received from the SPI device
+     */
+    uint8_t transfer(uint8_t data);
+
+    /**
+     * @brief Enable the motor driver by setting EN pin low
+     */
+    void enableDriver();
+
+    /**
+     * @brief Disable the motor driver by setting EN pin high
+     */
+    void disableDriver();
+
+    /**
+     * @brief Enable SPI communication by setting CS pin low
+     */
+    void enableSPI();
+
+    /**
+     * @brief Disable SPI communication by setting CS pin high
+     */
+    void disableSPI();
+
+    /**
+     * @brief Set step pin high
+     */
+    void stepHigh();
+
+    /**
+     * @brief Set step pin low
+     */
+    void stepLow();
+
+    /**
+     * @brief Set direction pin high (forward)
+     */
+    void dirHigh();
+
+    /**
+     * @brief Set direction pin low (reverse)
+     */
+    void dirLow();
+
 private:
-    // Private constructor for singleton pattern
-    MotorController();
-
-    // Delete copy constructor and assignment operator
-    MotorController(const MotorController&)            = delete;
-    MotorController& operator=(const MotorController&) = delete;
-
     // Internal configuration methods
     void configureDriver();             // Configure driver parameters
     void setupPins();                   // Setup GPIO pins
@@ -74,6 +132,15 @@ private:
     const int      stepDelay;     // Delay between steps
     unsigned long  lastStepTime;  // Timestamp of last step
     int            stepCounter;   // Step counter for status updates
+
+    // Pin assignments
+    const uint8_t csPin;    // Chip select pin
+    const uint8_t stepPin;  // Step pin
+    const uint8_t dirPin;   // Direction pin
+    const uint8_t enPin;    // Enable pin
+    const uint8_t mosiPin;  // MOSI pin
+    const uint8_t misoPin;  // MISO pin
+    const uint8_t sckPin;   // SCK pin
 
     // Current settings
     uint16_t runCurrent;   // Current running current value

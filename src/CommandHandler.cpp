@@ -1,5 +1,6 @@
 #include "CommandHandler.h"
 #include "config.h"
+#include "motor_instances.h"
 
 /**
  * @brief Get the singleton instance of CommandHandler
@@ -31,7 +32,7 @@ CommandHandler::CommandHandler() {}
  */
 void CommandHandler::resetDriver() {
     Serial.println("Resetting driver...");
-    MotorController::getInstance().begin();
+    motor1.begin();
     Serial.println("Driver reset complete");
 }
 
@@ -43,9 +44,12 @@ void CommandHandler::resetDriver() {
  * It's useful for diagnosing communication issues.
  */
 void CommandHandler::retestSPI() {
-    Serial.println("Testing SPI communication...");
-    SPIManager::getInstance().testCommunication();
-    Serial.println("SPI test complete");
+    bool result = motor1.testCommunication();
+    if (result) {
+        Serial.println("SPI communication successful");
+    } else {
+        Serial.println("SPI communication failed");
+    }
 }
 
 /**
@@ -104,15 +108,15 @@ void CommandHandler::processCommand(char cmd) {
 
     switch (cmd) {
         case CMD_FORWARD:
-            MotorController::getInstance().moveForward();
+            motor1.moveForward();
             Serial.println("Moving Forward");
             break;
         case CMD_REVERSE:
-            MotorController::getInstance().moveReverse();
+            motor1.moveReverse();
             Serial.println("Moving Reverse");
             break;
         case CMD_STOP:
-            MotorController::getInstance().stop();
+            motor1.stop();
             Serial.println("Stopped");
             break;
         case CMD_RESET:
@@ -122,54 +126,54 @@ void CommandHandler::processCommand(char cmd) {
             retestSPI();
             break;
         case CMD_INC_RUN_CURRENT:
-            MotorController::getInstance().increaseRunCurrent();
+            motor1.increaseRunCurrent();
             break;
         case CMD_DEC_RUN_CURRENT:
-            MotorController::getInstance().decreaseRunCurrent();
+            motor1.decreaseRunCurrent();
             break;
         case CMD_INC_HOLD_CURRENT:
-            MotorController::getInstance().increaseHoldCurrent();
+            motor1.increaseHoldCurrent();
             break;
         case CMD_DEC_HOLD_CURRENT:
-            MotorController::getInstance().decreaseHoldCurrent();
+            motor1.decreaseHoldCurrent();
             break;
         case CMD_SHOW_CURRENT:
             Serial.print("Run current: ");
-            Serial.print(MotorController::getInstance().getRunCurrent());
+            Serial.print(motor1.getRunCurrent());
             Serial.print("mA, Hold current: ");
-            Serial.print(MotorController::getInstance().getHoldCurrent());
+            Serial.print(motor1.getHoldCurrent());
             Serial.println("mA");
             break;
         case CMD_INC_SPEED:
-            MotorController::getInstance().increaseSpeed();
+            motor1.increaseSpeed();
             break;
         case CMD_DEC_SPEED:
-            MotorController::getInstance().decreaseSpeed();
+            motor1.decreaseSpeed();
             break;
         case CMD_INC_ACCEL:
-            MotorController::getInstance().increaseAcceleration();
+            motor1.increaseAcceleration();
             break;
         case CMD_DEC_ACCEL:
-            MotorController::getInstance().decreaseAcceleration();
+            motor1.decreaseAcceleration();
             break;
         case CMD_SHOW_SPEED:
             Serial.print("Speed: ");
-            Serial.print(MotorController::getInstance().getSpeed());
+            Serial.print(motor1.getSpeed());
             Serial.print(" steps/sec, Acceleration: ");
-            Serial.print(MotorController::getInstance().getAcceleration());
+            Serial.print(motor1.getAcceleration());
             Serial.println(" steps/sec²");
             break;
         case CMD_SHOW_STATUS:
-            MotorController::getInstance().printDriverStatus();
+            motor1.printDriverStatus();
             break;
         case CMD_SHOW_CONFIG:
-            MotorController::getInstance().printDriverConfig();
+            motor1.printDriverConfig();
             break;
         case CMD_SHOW_TEMP:
-            MotorController::getInstance().printTemperature();
+            motor1.printTemperature();
             break;
         case CMD_TOGGLE_MODE:
-            MotorController::getInstance().toggleStealthChop();
+            motor1.toggleStealthChop();
             break;
         case CMD_HELP:
         case CMD_HELP_ALT:
@@ -190,7 +194,7 @@ void CommandHandler::processCommand(char cmd) {
  * driver state and error conditions.
  */
 void CommandHandler::printStatus() {
-    uint32_t status = MotorController::getInstance().getDriverStatus();
+    uint32_t status = motor1.getDriverStatus();
     Serial.print("DRV_STATUS: 0x");
     Serial.println(status, HEX);
 }

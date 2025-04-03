@@ -1,13 +1,8 @@
 #include <Arduino.h>
 #include "CommandHandler.h"
-#include "MAE3Encoder.h"
 #include "MotorController.h"
-#include "SPIManager.h"
 #include "config.h"
-
-// Initialize encoder on pin 2 (adjust as needed)
-MAE3Encoder encoder(ESP32Pins::LeftSide::GPIO36, true);  // true for 12-bit mode
-uint16_t    lastPosition = 0;                            // Store last position for comparison
+#include "motor_instances.h"
 
 /**
  * @brief Initial setup of the system
@@ -17,18 +12,17 @@ void setup() {
     // Initialize serial communication for command interface
     Serial.begin(Config::System::SERIAL_BAUD_RATE);
     delay(Config::System::STARTUP_DELAY_MS);  // Startup delay for stability
+    while (!Serial) {
+        delay(10);
+    }
+    Serial.println("Initializing motor controllers...");
 
-    // Initialize encoder
-    encoder.begin();
-    Serial.println("Encoder initialized");
+    // Initialize each motor controller
+    motor1.begin();
 
     // Initialize and test SPI communication
-    SPIManager::getInstance().begin();
-    SPIManager::getInstance().testCommunication();
-    Serial.println("SPI Test completed");
+    motor1.testCommunication();
 
-    // Initialize motor controller and display command guide
-    MotorController::getInstance().begin();
     CommandHandler::getInstance().printCommandGuide();
 }
 
@@ -43,21 +37,8 @@ void loop() {
         CommandHandler::getInstance().processCommand(cmd);
     }
 
-    // Read encoder position and angle
-    uint16_t position = encoder.readPosition();
-
-    // Only print if position has changed
-    if (position != lastPosition) {
-        float angle = encoder.readAngle();
-        Serial.print("Position: ");
-        Serial.print(position);
-        Serial.print(" Angle: ");
-        Serial.println(angle);
-        lastPosition = position;
-    }
-
     // Update motor controller state
-    MotorController::getInstance().update();
+    motor1.update();
 
     delay(10);  // Reduced delay for better responsiveness
 }

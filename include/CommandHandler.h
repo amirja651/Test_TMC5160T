@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include "MotorController.h"
-#include "SPIManager.h"
 
 /**
  * @brief Command Handler class for processing user input commands
