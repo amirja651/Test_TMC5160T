@@ -265,3 +265,9 @@ void MultiMotorController::deselectDevice(uint8_t motorIndex) {
 uint8_t MultiMotorController::transfer(uint8_t data) {
     return SPI.transfer(data);
 }
+
+void MultiMotorController::resetDriver(uint8_t motorIndex) {
+    if (motorIndex < numMotors) {
+        drivers[motorIndex].reset();
+    }
+}

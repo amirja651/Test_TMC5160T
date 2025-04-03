@@ -49,20 +49,15 @@ namespace Config {
 
     // SPI Configuration
     struct SPI {
-        static const uint8_t MOSI       = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
-        static const uint8_t MISO       = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
-        static const uint8_t SCK        = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
-        static const uint8_t CS         = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
+        static const uint8_t MOSI = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
+        static const uint8_t MISO = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
+        static const uint8_t SCK  = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
+        // static const uint8_t CS         = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
         static const uint8_t TEST_VALUE = 0x55;  // Test pattern for SPI communication (alternating 1s and 0s)
     };
 
     // TMC5160 Motor Control Configuration
     struct TMC5160T_Driver {
-        // Common pins for all motors
-        static const uint8_t MOSI = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
-        static const uint8_t MISO = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
-        static const uint8_t SCK  = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
-
         // Motor 1 pins
         static const uint8_t D1_CS       = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
         static const uint8_t D1_STEP_PIN = ESP32Pins::RightSide::GPIO4;   // ADC2_0, Touch0
@@ -76,7 +71,7 @@ namespace Config {
         static const uint8_t D2_EN_PIN   = ESP32Pins::RightSide::GPIO22;  // ADC2_6, Touch6
 
         // Motor 3 pins
-        static const uint8_t D3_CS       = ESP32Pins::LeftSide::GPIO13;  // V_SPI_CS2
+        static const uint8_t D3_CS       = ESP32Pins::LeftSide::GPIO13;  // V_SPI_CS2÷ضشص2
         static const uint8_t D3_STEP_PIN = ESP32Pins::LeftSide::GPIO12;  // ADC2_4, Touch4
         static const uint8_t D3_DIR_PIN  = ESP32Pins::LeftSide::GPIO14;  // ADC2_7, Touch7
         static const uint8_t D3_EN_PIN   = ESP32Pins::LeftSide::GPIO27;  // ADC2_8, Touch8
@@ -143,6 +138,11 @@ namespace Config {
         constexpr char CMD_TOGGLE_MODE      = 'n';
         constexpr char CMD_HELP             = 'h';
         constexpr char CMD_HELP_ALT         = '?';
+        // New SPI test commands
+        constexpr char CMD_TEST_SPI_DRIVER1 = '3';
+        constexpr char CMD_TEST_SPI_DRIVER2 = '4';
+        constexpr char CMD_TEST_SPI_DRIVER3 = '5';
+        constexpr char CMD_TEST_SPI_DRIVER4 = '6';
     }  // namespace CommandHandler
 
     // Motor Controller Configuration

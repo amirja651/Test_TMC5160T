@@ -56,6 +56,12 @@ public:
     void stop(uint8_t motorIndex);
 
     /**
+     * @brief Reset a specific motor's driver
+     * @param motorIndex Index of the motor to control
+     */
+    void resetDriver(uint8_t motorIndex);
+
+    /**
      * @brief Get driver status for a specific motor
      * @param motorIndex Index of the motor to check
      * @return Driver status register value
