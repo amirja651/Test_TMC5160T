@@ -1,21 +1,21 @@
 #ifndef MOTOR_CONTROLLER_H
 #define MOTOR_CONTROLLER_H
 
-#include <Arduino.h>
-#include <SPI.h>
 #include <TMCStepper.h>
-#include "config.h"
+#include "Config.h"
 
 /**
  * @brief Motor Controller class for managing TMC5160 stepper motor driver
  *
- * This class implements a controller for the TMC5160 stepper motor driver.
- * Multiple instances can be created, each controlling a separate motor.
+ * This class implements a high-precision controller for the TMC5160 stepper motor driver,
+ * optimized for medical-grade applications using pancake motors.
  */
-class MotorController {
+class MotorController
+{
 public:
     /**
      * @brief Constructor for MotorController
+     * @param name Name of this motor controller instance
      * @param csPin Chip select pin for this motor
      * @param stepPin Step pin for this motor
      * @param dirPin Direction pin for this motor
@@ -24,7 +24,7 @@ public:
      * @param misoPin MISO pin for SPI (optional, defaults to Config::SPI::MISO)
      * @param sckPin SCK pin for SPI (optional, defaults to Config::SPI::SCK)
      */
-    MotorController(uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
+    MotorController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
                     uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
                     uint8_t sckPin = Config::SPI::SCK);
 
@@ -60,14 +60,18 @@ public:
     int  getTemperature();    // Get current driver temperature
     void printTemperature();  // Print current temperature
 
+    // StealthChop mode
     void toggleStealthChop();  // Toggle stealth chop mode
+
+    void setStealthChopMode(bool enable);  // Set stealth chop mode
 
     /**
      * @brief Performs a basic SPI communication test
      * Sends a test pattern (0x55) to verify SPI communication
+     * @param enableMessage Whether to print messages to the serial monitor
      * @return true if communication is successful, false otherwise
      */
-    bool testCommunication();
+    bool testCommunication(bool enableMessage = true);
 
     /**
      * @brief Performs a single byte SPI transfer
@@ -97,6 +101,12 @@ public:
     void disableSPI();
 
     /**
+     * @brief Reset the driver by disabling and re-enabling it
+     * This method performs a complete reset of the driver state
+     */
+    void resetDriverState();
+
+    /**
      * @brief Set step pin high
      */
     void stepHigh();
@@ -116,14 +126,51 @@ public:
      */
     void dirLow();
 
+    /**
+     * @brief Print the name of this motor controller instance
+     */
+    void printInstanceName() const;
+
+    /**
+     * @brief Optimize the motor controller for pancake motor
+     */
+    void optimizeForPancake();
+
+    // Advanced motor control methods
+    void setCoolStepThreshold(uint32_t threshold);  // Set CoolStep threshold
+    void setStallGuardThreshold(int8_t threshold);  // Set StallGuard threshold
+    void setStallGuardFilter(bool enable);          // Enable/disable StallGuard filter
+    void setSpreadCycle(bool enable);               // Enable/disable SpreadCycle mode
+    void setMicrostepInterpolation(bool enable);    // Enable/disable microstep interpolation
+
+    // Advanced current control
+    void setCurrentScaling(uint8_t scaling);  // Set current scaling factor
+    void setCurrentHoldDelay(uint8_t delay);  // Set current hold delay
+    void setCurrentRunDelay(uint8_t delay);   // Set current run delay
+
+    // Motion control
+    void setRampMode(uint8_t mode);           // Set ramp mode (0: Positioning, 1: Velocity)
+    void setMaxSpeed(uint32_t speed);         // Set maximum speed
+    void setMaxAcceleration(uint32_t accel);  // Set maximum acceleration
+    void setMaxDeceleration(uint32_t decel);  // Set maximum deceleration
+
+    // Advanced diagnostics
+    void     enableDiagnostics();   // Enable advanced diagnostics
+    void     disableDiagnostics();  // Disable advanced diagnostics
+    uint32_t getStallGuardValue();  // Get current StallGuard value
+    uint32_t getLoadValue();        // Get current load value
+    bool     isStalled();           // Check if motor is stalled
+
 private:
     // Internal configuration methods
-    void configureDriver();             // Configure driver parameters
-    void setupPins();                   // Setup GPIO pins
-    void step();                        // Execute single step
-    bool checkAndReinitializeDriver();  // Check and reinitialize driver if needed
-    void handlePowerLoss();             // Handle power loss situation
-    void checkStall();                  // Check for motor stall condition
+    void configureDriver();                                  // Configure driver parameters
+    void setupPins();                                        // Setup GPIO pins
+    void step();                                             // Execute single step
+    bool checkAndReinitializeDriver();                       // Check and reinitialize driver if needed
+    void handlePowerLoss();                                  // Handle power loss situation
+    void checkStall();                                       // Check for motor stall condition
+    bool checkDriveVoltageError(bool enableMessage = true);  // Check for drive voltage error
+    void setMovementDirection(bool forward);                 // Set movement direction and update state
 
     // Driver instance and state variables
     TMC5160Stepper driver;        // TMC5160 driver instance
@@ -159,6 +206,35 @@ private:
     // Temperature monitoring variables
     unsigned long lastTempPrintTime;  // Last temperature print timestamp
     int           lastTemperature;    // Last recorded temperature
+
+    // Instance identification
+    const char* instanceName;  // Name of this motor controller instance
+
+    // Advanced control parameters
+    bool     diagnosticsEnabled;      // Whether advanced diagnostics are enabled
+    uint32_t coolStepThreshold;       // CoolStep threshold value
+    int8_t   stallGuardThreshold;     // StallGuard threshold value
+    bool     stallGuardFilter;        // StallGuard filter state
+    bool     spreadCycleEnabled;      // SpreadCycle mode state
+    bool     microstepInterpolation;  // Microstep interpolation state
+
+    // Advanced current control parameters
+    uint8_t currentScaling;    // Current scaling factor
+    uint8_t currentHoldDelay;  // Current hold delay
+    uint8_t currentRunDelay;   // Current run delay
+
+    // Motion control parameters
+    uint8_t  rampMode;         // Current ramp mode
+    uint32_t maxSpeed;         // Maximum speed
+    uint32_t maxAcceleration;  // Maximum acceleration
+    uint32_t maxDeceleration;  // Maximum deceleration
+
+    // Advanced diagnostics
+    void updateDiagnostics();    // Update diagnostic information
+    void handleStall();          // Handle stall condition
+    void optimizeCurrent();      // Optimize current based on load
+    void checkLoad();            // Check motor load
+    void adjustMicrostepping();  // Adjust microstepping based on speed
 };
 
 #endif

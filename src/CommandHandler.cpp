@@ -1,6 +1,28 @@
 #include "CommandHandler.h"
-#include "config.h"
-#include "motor_instances.h"
+
+// Initialize static members
+CommandHandler* CommandHandler::instance = nullptr;
+
+// Command definitions
+const Command CommandHandler::commands[] = {
+    {"Forward", "Move motor forward", CommandType::MOTOR_MOVE, Config::CommandHandler::CMD_FORWARD, true},
+    {"Reverse", "Move motor in reverse", CommandType::MOTOR_MOVE, Config::CommandHandler::CMD_REVERSE, true},
+    {"Stop", "Stop motor", CommandType::MOTOR_STOP, Config::CommandHandler::CMD_STOP, true},
+
+    {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST, Config::CommandHandler::CMD_TEST_SPI, true},
+
+    {"Info", "Show system information", CommandType::DRIVER_STATUS, Config::CommandHandler::CMD_SHOW_STATUS, true},
+    {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG, Config::CommandHandler::CMD_SHOW_CONFIG, true},
+
+    {"Temp", "Show temperature", CommandType::TEMPERATURE, Config::CommandHandler::CMD_SHOW_TEMP, true},
+    {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, Config::CommandHandler::CMD_TOGGLE_MODE, true},
+
+    {"Reset", "Reset driver", CommandType::DRIVER_RESET, Config::CommandHandler::CMD_RESET, true},
+
+    {"Help", "Show command guide", CommandType::HELP, Config::CommandHandler::CMD_HELP, false},
+    {"?", "Show command guide", CommandType::HELP, Config::CommandHandler::CMD_HELP_ALT, false}};
+
+const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
 
 /**
  * @brief Get the singleton instance of CommandHandler
@@ -9,9 +31,13 @@
  * This method implements the singleton pattern, ensuring only one
  * instance of CommandHandler exists throughout the program's lifetime.
  */
-CommandHandler& CommandHandler::getInstance() {
-    static CommandHandler instance;
-    return instance;
+CommandHandler& CommandHandler::getInstance()
+{
+    if (!instance)
+    {
+        instance = new CommandHandler();
+    }
+    return *instance;
 }
 
 /**
@@ -24,70 +50,156 @@ CommandHandler& CommandHandler::getInstance() {
 CommandHandler::CommandHandler() {}
 
 /**
- * @brief Reset the motor driver and reinitialize it
- *
- * This method performs a complete reset of the TMC5160T driver
- * by reinitializing the MotorController. This is useful for
- * recovering from error states or applying new configurations.
- */
-void CommandHandler::resetDriver() {
-    Serial.println("Resetting driver...");
-    motor1.begin();
-    Serial.println("Driver reset complete");
-}
-
-/**
- * @brief Test SPI communication with the motor driver
- *
- * This method verifies the SPI communication with the TMC5160T
- * driver by sending a test pattern and checking the response.
- * It's useful for diagnosing communication issues.
- */
-void CommandHandler::retestSPI() {
-    bool result = motor1.testCommunication();
-    if (result) {
-        Serial.println("SPI communication successful");
-    } else {
-        Serial.println("SPI communication failed");
-    }
-}
-
-/**
  * @brief Print the command guide with all available commands
  *
  * Displays a formatted list of all available commands and their
  * descriptions. This is shown when the help command is received
  * or when an invalid command is entered.
  */
-void CommandHandler::printCommandGuide() {
-    using namespace Config::CommandHandler;
+void CommandHandler::printCommandGuide()
+{
+    Serial.println("\n ==================== Available Commands ====================");
+    Serial.println("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
+    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    {
+        if (commands[i].requiresMotorNumber)
+        {
+            Serial.print("  motor x ");
+            Serial.print(commands[i].key);
+            Serial.print(" - ");
+            Serial.println(commands[i].description);
+        }
+    }
+    Serial.println("\nSystem Commands:");
+    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    {
+        if (!commands[i].requiresMotorNumber)
+        {
+            Serial.print("  ");
+            Serial.print(commands[i].key);
+            Serial.print(" - ");
+            Serial.println(commands[i].description);
+        }
+    }
+    Serial.println("\n ==================== End of Command Guide ====================\n> ");
+}
 
-    Serial.println("\nCommand Guide:");
-    Serial.println("\nMovement:");
-    Serial.println("  " + String(CMD_FORWARD) + "/" + String(CMD_REVERSE) + " | " +
-                   String(CMD_STOP) + " -> Move Forward/Reverse | Stop");
-    Serial.println("\nCurrent Control:");
-    Serial.println("  " + String(CMD_INC_RUN_CURRENT) + "/" + String(CMD_DEC_RUN_CURRENT) +
-                   " -> Increase/Decrease Run Current");
-    Serial.println("  " + String(CMD_INC_HOLD_CURRENT) + "/" + String(CMD_DEC_HOLD_CURRENT) +
-                   " -> Increase/Decrease Hold Current");
-    Serial.println("  " + String(CMD_SHOW_CURRENT) + " -> Show Current Settings");
-    Serial.println("\nSpeed Control:");
-    Serial.println("  " + String(CMD_INC_SPEED) + "/" + String(CMD_DEC_SPEED) +
-                   " -> Increase/Decrease Speed");
-    Serial.println("  " + String(CMD_INC_ACCEL) + "/" + String(CMD_DEC_ACCEL) +
-                   " -> Increase/Decrease Acceleration");
-    Serial.println("  " + String(CMD_SHOW_SPEED) + " -> Show Speed Settings");
-    Serial.println("\nStatus & Diagnostics:");
-    Serial.println("  " + String(CMD_SHOW_STATUS) + " -> Show Detailed Driver Status");
-    Serial.println("  " + String(CMD_SHOW_CONFIG) + " -> Show Driver Configuration");
-    Serial.println("  " + String(CMD_SHOW_TEMP) + " -> Show Temperature");
-    Serial.println("\nSystem:");
-    Serial.println("  " + String(CMD_RESET) + " -> Reset Driver");
-    Serial.println("  " + String(CMD_TEST_SPI) + " -> Test SPI");
-    Serial.println("  " + String(CMD_HELP) + " or " + String(CMD_HELP_ALT) + " -> Show this guide");
-    Serial.println("\nMotor Mode:");
-    Serial.println("  " + String(CMD_TOGGLE_MODE) + " -> Toggle StealthChop/SpreadCycle Mode");
+const Command* CommandHandler::findCommand(const char* input) const
+{
+    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    {
+        if (input[0] == commands[i].key)
+        {
+            return &commands[i];
+        }
+    }
+    return nullptr;
+}
+
+bool CommandHandler::validateMotorNumber(int motorNum) const
+{
+    return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
+}
+
+void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
+{
+    if (motors[motorNum - 1].testCommunication(false))
+    {
+        switch (type)
+        {
+            case CommandType::MOTOR_MOVE:
+                if (type == CommandType::MOTOR_MOVE)
+                {
+                    Serial.print("Motor ");
+                    Serial.print(motorNum);
+                    Serial.println(" moving forward");
+                    motors[motorNum - 1].moveForward();
+                }
+                else
+                {
+                    Serial.print("Motor ");
+                    Serial.print(motorNum);
+                    Serial.println(" moving reverse");
+                    motors[motorNum - 1].moveReverse();
+                }
+                break;
+
+            case CommandType::MOTOR_STOP:
+                Serial.print("Motor ");
+                Serial.print(motorNum);
+                Serial.println(" stopped");
+                motors[motorNum - 1].stop();
+                break;
+
+            case CommandType::DRIVER_RESET:
+                Serial.print("Resetting driver for Motor ");
+                Serial.print(motorNum);
+                Serial.println(": ");
+                motors[motorNum - 1].resetDriverState();
+                break;
+
+            case CommandType::DRIVER_SPI_TEST:
+                Serial.print("\nMotor ");
+                Serial.print(motorNum);
+                Serial.print(" - ");
+                motors[motorNum - 1].testCommunication();
+                break;
+
+            case CommandType::DRIVER_STATUS:
+                Serial.print("\nDriver Status for Motor ");
+                Serial.print(motorNum);
+                Serial.println(": ");
+                motors[motorNum - 1].printDriverStatus();
+                break;
+
+            case CommandType::DRIVER_CONFIG:
+                Serial.print("\nDriver Configuration for Motor ");
+                Serial.print(motorNum);
+                Serial.println(": ");
+                motors[motorNum - 1].printDriverConfig();
+                break;
+
+            case CommandType::TEMPERATURE:
+                Serial.print("\nTemperature for Motor ");
+                Serial.print(motorNum);
+                Serial.print(": ");
+                motors[motorNum - 1].printTemperature();
+                break;
+
+            case CommandType::MODE_TOGGLE:
+                Serial.print("\nToggling mode for Motor ");
+                Serial.print(motorNum);
+                Serial.println(": ");
+                motors[motorNum - 1].toggleStealthChop();
+                break;
+
+            case CommandType::HELP:
+                printCommandGuide();
+                break;
+
+            default:
+                Serial.println("Invalid command type ❌ ");
+                break;
+        }
+    }
+    else
+    {
+        Serial.print("\nMotor ");
+        Serial.print(motorNum);
+        Serial.println(" communication failed ❌ ");
+    }
+}
+
+bool CommandHandler::isValidMotorCommand(char cmd) const
+{
+    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    {
+        if (commands[i].requiresMotorNumber && commands[i].key == cmd)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -95,106 +207,38 @@ void CommandHandler::printCommandGuide() {
  * @param cmd The command character to process
  *
  * This method handles all user input commands by mapping them to
- * appropriate motor control operations. It supports commands for:
- * - Movement control (forward, reverse, stop)
- * - Current control (run and hold current adjustment)
- * - Speed control (speed and acceleration adjustment)
- * - Status monitoring and diagnostics
- * - System operations (reset, SPI test)
- * - Help and configuration display
+ * appropriate motor control operations.
  */
-void CommandHandler::processCommand(char cmd) {
-    using namespace Config::CommandHandler;
+void CommandHandler::processCommand(char cmd, int motorNum)
+{
+    const Command* command = findCommand(&cmd);
 
-    switch (cmd) {
-        case CMD_FORWARD:
-            motor1.moveForward();
-            Serial.println("Moving Forward");
-            break;
-        case CMD_REVERSE:
-            motor1.moveReverse();
-            Serial.println("Moving Reverse");
-            break;
-        case CMD_STOP:
-            motor1.stop();
-            Serial.println("Stopped");
-            break;
-        case CMD_RESET:
-            resetDriver();
-            break;
-        case CMD_TEST_SPI:
-            retestSPI();
-            break;
-        case CMD_INC_RUN_CURRENT:
-            motor1.increaseRunCurrent();
-            break;
-        case CMD_DEC_RUN_CURRENT:
-            motor1.decreaseRunCurrent();
-            break;
-        case CMD_INC_HOLD_CURRENT:
-            motor1.increaseHoldCurrent();
-            break;
-        case CMD_DEC_HOLD_CURRENT:
-            motor1.decreaseHoldCurrent();
-            break;
-        case CMD_SHOW_CURRENT:
-            Serial.print("Run current: ");
-            Serial.print(motor1.getRunCurrent());
-            Serial.print("mA, Hold current: ");
-            Serial.print(motor1.getHoldCurrent());
-            Serial.println("mA");
-            break;
-        case CMD_INC_SPEED:
-            motor1.increaseSpeed();
-            break;
-        case CMD_DEC_SPEED:
-            motor1.decreaseSpeed();
-            break;
-        case CMD_INC_ACCEL:
-            motor1.increaseAcceleration();
-            break;
-        case CMD_DEC_ACCEL:
-            motor1.decreaseAcceleration();
-            break;
-        case CMD_SHOW_SPEED:
-            Serial.print("Speed: ");
-            Serial.print(motor1.getSpeed());
-            Serial.print(" steps/sec, Acceleration: ");
-            Serial.print(motor1.getAcceleration());
-            Serial.println(" steps/sec²");
-            break;
-        case CMD_SHOW_STATUS:
-            motor1.printDriverStatus();
-            break;
-        case CMD_SHOW_CONFIG:
-            motor1.printDriverConfig();
-            break;
-        case CMD_SHOW_TEMP:
-            motor1.printTemperature();
-            break;
-        case CMD_TOGGLE_MODE:
-            motor1.toggleStealthChop();
-            break;
-        case CMD_HELP:
-        case CMD_HELP_ALT:
-            printCommandGuide();
-            break;
-        default:
-            Serial.println("Invalid command. Type '" + String(CMD_HELP) + "' or '" +
-                           String(CMD_HELP_ALT) + "' for help.");
-            break;
+    if (!command)
+    {
+        Serial.println("Invalid command ❌");
+        return;
     }
-}
 
-/**
- * @brief Print the current driver status register value
- *
- * Displays the raw DRV_STATUS register value from the TMC5160T
- * driver in hexadecimal format. This is useful for debugging
- * driver state and error conditions.
- */
-void CommandHandler::printStatus() {
-    uint32_t status = motor1.getDriverStatus();
-    Serial.print("DRV_STATUS: 0x");
-    Serial.println(status, HEX);
+    if (command->requiresMotorNumber)
+    {
+        if (!validateMotorNumber(motorNum))
+        {
+            Serial.print("Invalid motor number (1-");
+            Serial.print(Config::TMC5160T_Driver::NUM_MOTORS);
+            Serial.println(") ❌");
+            return;
+        }
+        executeMotorCommand(motorNum, command->type);
+    }
+    else
+    {
+        // Handle system commands here
+        if (command->type == CommandType::DRIVER_STATUS)
+        {
+            Serial.println("System Information:");
+            Serial.print("Number of motors: ");
+            Serial.println(Config::TMC5160T_Driver::NUM_MOTORS);
+            // Add more system info as needed
+        }
+    }
 }
