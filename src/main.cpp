@@ -1,5 +1,6 @@
 #include "CommandHandler.h"
 #include "Config.h"
+#include "MAE3Encoder.h"
 
 // Task handles
 TaskHandle_t serialTaskHandle      = NULL;
@@ -131,6 +132,9 @@ void motorUpdateTask(void* pvParameters)
     }
 }
 
+// Create encoder instance on pin 36
+MAE3Encoder encoder(35);
+
 /**
  * @brief Initial setup of the system
  * Configures serial communication, SPI interface, and motor controller
@@ -167,6 +171,9 @@ void setup()
 
     // Start scheduler
     vTaskStartScheduler();
+
+    // Initialize encoder
+    encoder.begin();
 }
 
 /**
@@ -175,6 +182,17 @@ void setup()
  */
 void loop()
 {
-    // Empty - FreeRTOS scheduler handles everything
+    // Update encoder position
+    if (encoder.update())
+    {
+        // Print position only when it changes
+        Serial.print("Position: ");
+        Serial.print(encoder.getPositionDegrees(), 2);
+        Serial.print("° (Pulse width: ");
+        Serial.print(encoder.getPulseWidth());
+        Serial.println(" μs)");
+    }
+
+    // Small delay to prevent overwhelming the serial output
     delay(10);
 }
