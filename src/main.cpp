@@ -3,9 +3,12 @@
 #include "MAE3Encoder.h"
 
 // Task handles
-TaskHandle_t serialTaskHandle      = NULL;
-TaskHandle_t commandTaskHandle     = NULL;
-TaskHandle_t motorUpdateTaskHandle = NULL;
+TaskHandle_t serialTaskHandle       = NULL;
+TaskHandle_t commandTaskHandle      = NULL;
+TaskHandle_t motorUpdateTaskHandle0 = NULL;
+TaskHandle_t motorUpdateTaskHandle1 = NULL;
+TaskHandle_t motorUpdateTaskHandle2 = NULL;
+TaskHandle_t motorUpdateTaskHandle3 = NULL;
 
 // Queue for serial commands
 QueueHandle_t commandQueue;
@@ -40,17 +43,17 @@ void serialTask(void* pvParameters)
                     }
 
                     // Validate command format
-                    if (strncmp(inputBuffer, "motor ", 6) == 0)
+                    if (strncmp(inputBuffer, "m ", 2) == 0)
                     {
-                        if (strlen(inputBuffer) < 9)
+                        if (strlen(inputBuffer) < 5)  // Changed from 9 to 5 (m 1 w = 5 chars)
                         {
                             Serial.println("❌ Invalid command. Use h/? for help");
                             bufferIndex = 0;
                             continue;
                         }
 
-                        int  motorNum = inputBuffer[6] - '0';
-                        char cmd      = inputBuffer[8];
+                        int  motorNum = inputBuffer[2] - '0';
+                        char cmd      = inputBuffer[4];
 
                         if (motorNum < 1 || motorNum > Config::TMC5160T_Driver::NUM_MOTORS)
                         {
@@ -100,10 +103,10 @@ void commandTask(void* pvParameters)
             Serial.println(inputBuffer);
             Serial.println();
 
-            if (strncmp(inputBuffer, "motor ", 6) == 0)
+            if (strncmp(inputBuffer, "m ", 2) == 0)
             {
-                int  motorNum = inputBuffer[6] - '0';
-                char cmd      = inputBuffer[8];
+                int  motorNum = inputBuffer[2] - '0';
+                char cmd      = inputBuffer[4];
 
                 CommandHandler::getInstance().processCommand(cmd, motorNum);
             }
@@ -117,17 +120,57 @@ void commandTask(void* pvParameters)
 }
 
 // Task for updating motor states
-void motorUpdateTask(void* pvParameters)
+void motorUpdateTask0(void* pvParameters)
 {
-    const TickType_t xFrequency    = pdMS_TO_TICKS(1);
+    const TickType_t xFrequency    = pdMS_TO_TICKS(10);  // Changed from 1ms to 10ms
     TickType_t       xLastWakeTime = xTaskGetTickCount();
 
     while (1)
     {
-        for (uint8_t i = 0; i < Config::TMC5160T_Driver::NUM_MOTORS; i++)
-        {
-            motors[i].update();
-        }
+        motors[0].update();
+        taskYIELD();  // Allow other tasks to run between motor updates
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
+
+// Task for updating motor states
+void motorUpdateTask1(void* pvParameters)
+{
+    const TickType_t xFrequency    = pdMS_TO_TICKS(10);  // Changed from 1ms to 10ms
+    TickType_t       xLastWakeTime = xTaskGetTickCount();
+
+    while (1)
+    {
+        motors[1].update();
+        taskYIELD();  // Allow other tasks to run between motor updates
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
+
+// Task for updating motor states
+void motorUpdateTask2(void* pvParameters)
+{
+    const TickType_t xFrequency    = pdMS_TO_TICKS(10);  // Changed from 1ms to 10ms
+    TickType_t       xLastWakeTime = xTaskGetTickCount();
+
+    while (1)
+    {
+        motors[2].update();
+        taskYIELD();  // Allow other tasks to run between motor updates
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
+
+// Task for updating motor states
+void motorUpdateTask3(void* pvParameters)
+{
+    const TickType_t xFrequency    = pdMS_TO_TICKS(10);  // Changed from 1ms to 10ms
+    TickType_t       xLastWakeTime = xTaskGetTickCount();
+
+    while (1)
+    {
+        motors[3].update();
+        taskYIELD();  // Allow other tasks to run between motor updates
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
@@ -167,7 +210,10 @@ void setup()
     // Create tasks with increased stack sizes
     xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);
     xTaskCreate(commandTask, "CommandTask", 4096, NULL, 2, &commandTaskHandle);
-    xTaskCreate(motorUpdateTask, "MotorUpdateTask", 4096, NULL, 3, &motorUpdateTaskHandle);
+    xTaskCreate(motorUpdateTask0, "MotorUpdateTask0", 4096, NULL, 3, &motorUpdateTaskHandle0);
+    xTaskCreate(motorUpdateTask1, "MotorUpdateTask1", 4096, NULL, 3, &motorUpdateTaskHandle1);
+    xTaskCreate(motorUpdateTask2, "MotorUpdateTask2", 4096, NULL, 3, &motorUpdateTaskHandle2);
+    xTaskCreate(motorUpdateTask3, "MotorUpdateTask3", 4096, NULL, 3, &motorUpdateTaskHandle3);
 
     // Start scheduler
     vTaskStartScheduler();

@@ -235,35 +235,44 @@ void MotorController::update()
 {
     if (isMoving)
     {
+        // Handle step timing
         if (micros() - lastStepTime >= (1000000 / speed))
         {
             step();
         }
 
-        // Update diagnostics if enabled
-        if (diagnosticsEnabled)
+        // Update diagnostics less frequently
+        static unsigned long lastDiagnosticTime = 0;
+        if (diagnosticsEnabled && millis() - lastDiagnosticTime >= 100)
         {
             updateDiagnostics();
+            lastDiagnosticTime = millis();
         }
 
-        // Check load and optimize current
-        checkLoad();
-        optimizeCurrent();
-
-        // Adjust microstepping based on speed
-        adjustMicrostepping();
-
-        // Monitor temperature
-        int temp = getTemperature();
-        if (temp > Config::TMC5160T_Driver::TEMP_WARNING_THRESHOLD)
+        // Check load and optimize current less frequently
+        static unsigned long lastLoadCheckTime = 0;
+        if (millis() - lastLoadCheckTime >= 50)
         {
-            Serial.print("⚠️ WARNING: High temperature detected on ");
-            Serial.print(instanceName);
-            Serial.print(": ");
-            Serial.println(temp);
-            // Reduce current by 20% if temperature is high
-            uint16_t reducedCurrent = runCurrent * 0.8;
-            driver.rms_current(reducedCurrent);
+            checkLoad();
+            optimizeCurrent();
+            lastLoadCheckTime = millis();
+        }
+
+        // Monitor temperature less frequently
+        static unsigned long lastTempCheckTime = 0;
+        if (millis() - lastTempCheckTime >= 200)
+        {
+            int temp = getTemperature();
+            if (temp > Config::TMC5160T_Driver::TEMP_WARNING_THRESHOLD)
+            {
+                Serial.print("⚠️ WARNING: High temperature detected on ");
+                Serial.print(instanceName);
+                Serial.print(": ");
+                Serial.println(temp);
+                uint16_t reducedCurrent = runCurrent * 0.8;
+                driver.rms_current(reducedCurrent);
+            }
+            lastTempCheckTime = millis();
         }
 
         // Print temperature at configured interval
@@ -271,6 +280,14 @@ void MotorController::update()
         {
             printTemperature();
             lastTempPrintTime = millis();
+        }
+
+        // Adjust microstepping based on speed
+        static unsigned long lastMicrostepCheckTime = 0;
+        if (millis() - lastMicrostepCheckTime >= 100)
+        {
+            adjustMicrostepping();
+            lastMicrostepCheckTime = millis();
         }
     }
 }
