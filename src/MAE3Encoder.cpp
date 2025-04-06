@@ -32,38 +32,27 @@ void MAE3Encoder::begin()
     lastUpdateTime = millis();
 }
 
-// Static interrupt handler
+// Static interrupt handler - keep it minimal
 void MAE3Encoder::handleInterrupt()
 {
     if (instance)
     {
-        instance->measurePulse();
-    }
-}
-
-// Measure pulse width from interrupt
-void MAE3Encoder::measurePulse()
-{
-    unsigned long currentTime = micros();
-
-    if (digitalRead(signalPin) == HIGH)
-    {
-        // Rising edge - start of pulse
-        pulseStartTime = currentTime;
-    }
-    else
-    {
-        // Falling edge - end of pulse
-        if (pulseStartTime != 0)
+        // Only record the time in the interrupt handler
+        if (digitalRead(instance->signalPin) == HIGH)
         {
-            unsigned long pulseWidth = currentTime - pulseStartTime;
-
-            // Filter out invalid pulse widths
-            // Valid range: 5-3935 microseconds
-            if (pulseWidth > 5 && pulseWidth < 3935)
+            instance->pulseStartTime = micros();
+        }
+        else
+        {
+            unsigned long currentTime = micros();
+            if (instance->pulseStartTime != 0)
             {
-                currentPulseWidth = pulseWidth;
-                newPulseAvailable = true;
+                unsigned long pulseWidth = currentTime - instance->pulseStartTime;
+                if (pulseWidth > MIN_PULSE_WIDTH && pulseWidth < MAX_PULSE_WIDTH)
+                {
+                    instance->currentPulseWidth = pulseWidth;
+                    instance->newPulseAvailable = true;
+                }
             }
         }
     }
@@ -76,9 +65,15 @@ bool MAE3Encoder::update()
         return false;
     }
 
+    // Disable interrupts while reading volatile variables
+    noInterrupts();
+    uint32_t pulseWidth = currentPulseWidth;
+    newPulseAvailable   = false;
+    interrupts();
+
     // Convert pulse width to degrees using floating-point map
     // 0 μs = 0°, 3933 μs = 360°
-    float newPosition = mapf(currentPulseWidth, 0, 3933, 0, 360);
+    float newPosition = mapf(pulseWidth, 0, 3933, 0, 360);
 
     // Ensure position stays within 0-360 range
     if (newPosition < 0.0f)
@@ -95,16 +90,14 @@ bool MAE3Encoder::update()
         positionDiff = 360.0f - positionDiff;
     }
 
-    // Only update if the position has changed by more than 0.5 degrees
-    if (positionDiff >= 0.5f)
+    // Only update if the position has changed by more than the threshold
+    if (positionDiff >= POSITION_THRESHOLD)
     {
-        lastPulseWidth    = currentPulseWidth;
-        lastPosition      = newPosition;
-        newPulseAvailable = false;
+        lastPulseWidth = pulseWidth;
+        lastPosition   = newPosition;
         return true;
     }
 
-    newPulseAvailable = false;
     return false;
 }
 

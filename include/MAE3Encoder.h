@@ -49,6 +49,11 @@ private:
     volatile unsigned long pulseStartTime;     // Start time of current pulse
     volatile unsigned long currentPulseWidth;  // Current pulse width measurement
     volatile bool          newPulseAvailable;  // Flag indicating new pulse measurement
+
+    // Constants for pulse width filtering
+    static constexpr uint32_t MIN_PULSE_WIDTH    = 5;     // Minimum valid pulse width in microseconds
+    static constexpr uint32_t MAX_PULSE_WIDTH    = 3935;  // Maximum valid pulse width in microseconds
+    static constexpr float    POSITION_THRESHOLD = 0.5f;  // Minimum position change in degrees
 };
 
 #endif  // MAE3_ENCODER_H
