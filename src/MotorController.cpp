@@ -623,7 +623,7 @@ int MotorController::getTemperature()
 {
     uint32_t status  = driver.DRV_STATUS();
     int      rawTemp = (status >> 16) & 0xFF;  // Temperature is in bits 16-23
-    return (rawTemp - 1) * 1.5;                // Convert to actual temperature in Celsius
+    return rawTemp;                            // Direct temperature reading in °C (1°C steps)
 }
 
 void MotorController::printTemperature()
@@ -631,6 +631,8 @@ void MotorController::printTemperature()
     int temp = getTemperature();
     if (temp != lastTemperature)
     {
+        Serial.print(instanceName);
+        Serial.print(": ");
         Serial.print(temp);
         Serial.println("°C");
         lastTemperature = temp;

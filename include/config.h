@@ -105,7 +105,7 @@ namespace Config
         static const uint32_t MAX_SPEED  = 10000;  // Maximum speed in steps/sec
 
         // Temperature monitoring settings
-        static const uint8_t  TEMP_WARNING_THRESHOLD = 60;    // Temperature warning threshold in °C
+        static const uint8_t  TEMP_WARNING_THRESHOLD = 80;    // Temperature warning threshold in °C
         static const uint32_t TEMP_PRINT_INTERVAL    = 1000;  // Temperature print interval in ms
 
         // Status monitoring settings
