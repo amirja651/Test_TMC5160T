@@ -56,14 +56,16 @@ namespace Config
     // SPI Configuration
     struct SPI
     {
-        static const uint8_t MOSI       = ESP32Pins::RightSide::GPIO23;  // MOSI, V_SPI_D
-        static const uint8_t MISO       = ESP32Pins::RightSide::GPIO19;  // MISO, V_SPI_Q
-        static const uint8_t SCK        = ESP32Pins::RightSide::GPIO18;  // SCK, V_SPI_CLK
-        static const uint8_t MOTOR1_CS  = ESP32Pins::RightSide::GPIO5;   // V_SPI_CS0
-        static const uint8_t MOTOR2_CS  = ESP32Pins::RightSide::GPIO17;  // TX2
-        static const uint8_t MOTOR3_CS  = ESP32Pins::RightSide::GPIO16;  // RX2
-        static const uint8_t MOTOR4_CS  = ESP32Pins::RightSide::GPIO4;   // ADC2_0, Touch0
-        static const uint8_t TEST_VALUE = 0x55;                          // Test pattern for SPI communication
+        static const uint8_t MOSI = ESP32Pins::RightSide::GPIO23;
+        static const uint8_t MISO = ESP32Pins::RightSide::GPIO19;
+        static const uint8_t SCK  = ESP32Pins::RightSide::GPIO18;
+
+        static const uint8_t MOTOR1_CS = ESP32Pins::RightSide::GPIO4;
+        static const uint8_t MOTOR2_CS = ESP32Pins::RightSide::GPIO5;
+        static const uint8_t MOTOR3_CS = ESP32Pins::RightSide::GPIO15;
+        static const uint8_t MOTOR4_CS = ESP32Pins::RightSide::GPIO16;
+
+        static const uint8_t TEST_VALUE = 0x55;  // Test pattern for SPI communication
     };
 
     // TMC5160 Motor Control Configuration
@@ -72,25 +74,20 @@ namespace Config
         // Number of motors in the system
         static const uint8_t NUM_MOTORS = 4;
 
-        // Motor 1 pins
-        static const uint8_t MOTOR1_STEP_PIN = ESP32Pins::RightSide::GPIO4;   // ADC2_0, Touch0
-        static const uint8_t MOTOR1_DIR_PIN  = ESP32Pins::RightSide::GPIO2;   // ADC2_2, Touch2
-        static const uint8_t MOTOR1_EN_PIN   = ESP32Pins::RightSide::GPIO15;  // ADC2_3, Touch3
+        static const uint8_t MOTOR1_EN_PIN = ESP32Pins::RightSide::GPIO17;
+        static const uint8_t MOTOR2_EN_PIN = ESP32Pins::LeftSide::GPIO25;
+        static const uint8_t MOTOR3_EN_PIN = ESP32Pins::RightSide::GPIO21;
+        static const uint8_t MOTOR4_EN_PIN = ESP32Pins::RightSide::GPIO22;
 
-        // Motor 2 pins
-        static const uint8_t MOTOR2_STEP_PIN = ESP32Pins::LeftSide::GPIO32;  // ADC1_4, Touch9
-        static const uint8_t MOTOR2_DIR_PIN  = ESP32Pins::LeftSide::GPIO33;  // ADC1_5, Touch8
-        static const uint8_t MOTOR2_EN_PIN   = ESP32Pins::LeftSide::GPIO25;  // ADC2_8, DAC1
+        static const uint8_t MOTOR1_STEP_PIN = ESP32Pins::LeftSide::GPIO26;
+        static const uint8_t MOTOR2_STEP_PIN = ESP32Pins::LeftSide::GPIO27;
+        static const uint8_t MOTOR3_STEP_PIN = ESP32Pins::LeftSide::GPIO32;
+        static const uint8_t MOTOR4_STEP_PIN = ESP32Pins::LeftSide::GPIO33;
 
-        // Motor 3 pins
-        static const uint8_t MOTOR3_STEP_PIN = ESP32Pins::LeftSide::GPIO26;  // ADC2_9, DAC2
-        static const uint8_t MOTOR3_DIR_PIN  = ESP32Pins::LeftSide::GPIO27;  // ADC2_7, Touch7
-        static const uint8_t MOTOR3_EN_PIN   = ESP32Pins::LeftSide::GPIO14;  // ADC2_6, Touch6
-
-        // Motor 4 pins
-        static const uint8_t MOTOR4_STEP_PIN = ESP32Pins::LeftSide::GPIO12;  // ADC2_5, Touch5
-        static const uint8_t MOTOR4_DIR_PIN  = ESP32Pins::LeftSide::GPIO13;  // ADC2_4, Touch4
-        static const uint8_t MOTOR4_EN_PIN   = ESP32Pins::LeftSide::GPIO12;  // ADC2_5, Touch5
+        static const uint8_t MOTOR1_DIR_PIN = ESP32Pins::LeftSide::GPIO12;
+        static const uint8_t MOTOR2_DIR_PIN = ESP32Pins::LeftSide::GPIO13;
+        static const uint8_t MOTOR3_DIR_PIN = ESP32Pins::LeftSide::GPIO14;
+        static const uint8_t MOTOR4_DIR_PIN = ESP32Pins::RightSide::GPIO2;
 
         // Motor driver settings
         static const uint16_t TMC_CURRENT_MA = 1000;  // Motor RMS current in mA
