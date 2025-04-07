@@ -5,8 +5,8 @@ CommandHandler* CommandHandler::instance = nullptr;
 
 // Command definitions
 const Command CommandHandler::commands[] = {
-    {"Forward", "Move motor forward", CommandType::MOTOR_MOVE, Config::CommandHandler::CMD_FORWARD, true},
-    {"Reverse", "Move motor in reverse", CommandType::MOTOR_MOVE, Config::CommandHandler::CMD_REVERSE, true},
+    {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, Config::CommandHandler::CMD_FORWARD, true},
+    {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, Config::CommandHandler::CMD_REVERSE, true},
     {"Stop", "Stop motor", CommandType::MOTOR_STOP, Config::CommandHandler::CMD_STOP, true},
 
     {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST, Config::CommandHandler::CMD_TEST_SPI, true},
@@ -107,23 +107,18 @@ void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
     {
         switch (type)
         {
-            case CommandType::MOTOR_MOVE:
-                if (type == CommandType::MOTOR_MOVE)
-                {
-                    Serial.print("Motor ");
-                    Serial.print(motorNum);
-                    Serial.println(" moving forward");
-                    motors[motorNum - 1].moveForward();
-                }
-                else
-                {
-                    Serial.print("Motor ");
-                    Serial.print(motorNum);
-                    Serial.println(" moving reverse");
-                    motors[motorNum - 1].moveReverse();
-                }
+            case CommandType::MOTOR_FORWARD:
+                Serial.print("Motor ");
+                Serial.print(motorNum);
+                Serial.println(" moving forward");
+                motors[motorNum - 1].moveForward();
                 break;
-
+            case CommandType::MOTOR_REVERSE:
+                Serial.print("Motor ");
+                Serial.print(motorNum);
+                Serial.println(" moving reverse");
+                motors[motorNum - 1].moveReverse();
+                break;
             case CommandType::MOTOR_STOP:
                 Serial.print("Motor ");
                 Serial.print(motorNum);

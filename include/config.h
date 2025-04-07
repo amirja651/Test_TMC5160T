@@ -118,10 +118,6 @@ namespace Config
         static const uint16_t TCOOLTHRS  = 1000;  // CoolStep threshold
         static const uint8_t  TPOWERDOWN = 10;    // Power down time after standstill
 
-        // bit mask
-        static const uint32_t STALL_BIT_MASK   = 0x00000200;  // Stall detection bit mask
-        static const uint32_t VOLTAGE_BIT_MASK = 0x00000001;  // Check for drive voltage error (bit 0)
-
         // StallGuard and CoolStep settings
         static const int8_t   SGTHRS                 = 10;    // StallGuard threshold
         static const uint8_t  CURRENT_SCALING        = 32;    // Current scaling factor
@@ -155,8 +151,7 @@ namespace Config
     struct MotorController
     {
         // Status monitoring settings
-        static constexpr int      STATUS_PRINT_INTERVAL = 1000;        // Status print interval in steps
-        static constexpr uint32_t INVALID_STATUS        = 0xFFFFFFFF;  // Invalid driver status value
+        static constexpr int STATUS_PRINT_INTERVAL = 1000;  // Status print interval in steps
 
         // Current settings with motor specifications constraints
         static constexpr uint16_t CURRENT_STEP     = 100;   // Current adjustment step size in mA

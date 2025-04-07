@@ -1,4 +1,5 @@
 #include "MotorController.h"
+// driver.TCOOLTHRS(threshold);
 
 // Constructor initializes motor driver and sets default parameters
 MotorController::MotorController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
@@ -157,23 +158,9 @@ void MotorController::handlePowerLoss()
 bool MotorController::checkAndReinitializeDriver()
 {
     uint32_t status = driver.DRV_STATUS();
-    if (status == 0 || status == Config::MotorController::INVALID_STATUS)
+    if (status == 0 || status == 0xFFFFFFFF)
     {
         handlePowerLoss();
-        return true;
-    }
-    return false;
-}
-
-bool MotorController::checkDriveVoltageError(bool enableMessage)
-{
-    uint32_t status = driver.DRV_STATUS();
-    if (status & Config::TMC5160T_Driver::VOLTAGE_BIT_MASK)
-    {  // Check for drive voltage error (bit 0)
-        if (enableMessage)
-        {
-            Serial.println("ERROR: Drive voltage error detected ⚠️");
-        }
         return true;
     }
     return false;
@@ -185,15 +172,16 @@ void MotorController::setMovementDirection(bool forward)
     direction = forward;
     digitalWrite(dirPin, direction ? HIGH : LOW);
     delay(5);
-    Serial.print("Moving ");
-    Serial.println(forward ? "Forward" : "Reverse");
+    Serial.print(F("Moving "));
+    Serial.println(forward ? F("Forward") : F("Reverse"));
 }
 
 // Start motor movement in forward direction
 void MotorController::moveForward()
 {
-    if (checkDriveVoltageError())
+    if (!diagnoseTMC5160())
     {
+        Serial.println(F("❌ Driver error detected. Motor will not move."));
         return;
     }
     setMovementDirection(true);
@@ -202,8 +190,9 @@ void MotorController::moveForward()
 // Start motor movement in reverse direction
 void MotorController::moveReverse()
 {
-    if (checkDriveVoltageError())
+    if (!diagnoseTMC5160())
     {
+        Serial.println(F("❌ Driver error detected. Motor will not move."));
         return;
     }
     setMovementDirection(false);
@@ -265,9 +254,9 @@ void MotorController::update()
             int temp = getTemperature();
             if (temp > Config::TMC5160T_Driver::TEMP_WARNING_THRESHOLD)
             {
-                Serial.print("⚠️ WARNING: High temperature detected on ");
+                Serial.print(F("⚠️ WARNING: High temperature detected on "));
                 Serial.print(instanceName);
-                Serial.print(": ");
+                Serial.print(F(": "));
                 Serial.println(temp);
                 uint16_t reducedCurrent = runCurrent * 0.8;
                 driver.rms_current(reducedCurrent);
@@ -303,13 +292,13 @@ void MotorController::increaseRunCurrent()
     {
         runCurrent += Config::MotorController::CURRENT_STEP;
         driver.rms_current(runCurrent);
-        Serial.print("Run current increased to: ");
+        Serial.print(F("Run current increased to: "));
         Serial.print(runCurrent);
-        Serial.println("mA (Max: 1000mA)");
+        Serial.println(F("mA (Max: 1000mA)"));
     }
     else
     {
-        Serial.println("⚠️ Run current at maximum (1000mA)");
+        Serial.println(F("⚠️ Run current at maximum (1000mA)"));
     }
 }
 
@@ -319,13 +308,13 @@ void MotorController::decreaseRunCurrent()
     {
         runCurrent -= Config::MotorController::CURRENT_STEP;
         driver.rms_current(runCurrent);
-        Serial.print("Run current decreased to: ");
+        Serial.print(F("Run current decreased to: "));
         Serial.print(runCurrent);
-        Serial.println("mA (Min: 100mA)");
+        Serial.println(F("mA (Min: 100mA)"));
     }
     else
     {
-        Serial.println("⚠️ Run current at minimum (100mA)");
+        Serial.println(F("⚠️ Run current at minimum (100mA)"));
     }
 }
 
@@ -335,13 +324,13 @@ void MotorController::increaseHoldCurrent()
     {
         holdCurrent += Config::MotorController::CURRENT_STEP;
         driver.ihold(holdCurrent);
-        Serial.print("Hold current increased to: ");
+        Serial.print(F("Hold current increased to: "));
         Serial.print(holdCurrent);
-        Serial.println("mA (Max: 500mA)");
+        Serial.println(F("mA (Max: 500mA)"));
     }
     else
     {
-        Serial.println("Hold current at maximum (500mA)");
+        Serial.println(F("Hold current at maximum (500mA)"));
     }
 }
 
@@ -351,13 +340,13 @@ void MotorController::decreaseHoldCurrent()
     {
         holdCurrent -= Config::MotorController::CURRENT_STEP;
         driver.ihold(holdCurrent);
-        Serial.print("Hold current decreased to: ");
+        Serial.print(F("Hold current decreased to: "));
         Serial.print(holdCurrent);
-        Serial.println("mA (Min: 100mA)");
+        Serial.println(F("mA (Min: 100mA)"));
     }
     else
     {
-        Serial.println("Hold current at minimum (100mA)");
+        Serial.println(F("Hold current at minimum (100mA)"));
     }
 }
 
@@ -376,13 +365,13 @@ void MotorController::increaseSpeed()
     if (speed < Config::MotorController::MAX_SPEED)
     {
         speed += Config::MotorController::SPEED_STEP;
-        Serial.print("Speed increased to: ");
+        Serial.print(F("Speed increased to: "));
         Serial.print(speed);
-        Serial.println(" steps/sec");
+        Serial.println(F(" steps/sec"));
     }
     else
     {
-        Serial.println("Speed at maximum (10000 steps/sec)");
+        Serial.println(F("Speed at maximum (10000 steps/sec)"));
     }
 }
 
@@ -391,13 +380,13 @@ void MotorController::decreaseSpeed()
     if (speed > Config::MotorController::MIN_SPEED)
     {
         speed -= Config::MotorController::SPEED_STEP;
-        Serial.print("Speed decreased to: ");
+        Serial.print(F("Speed decreased to: "));
         Serial.print(speed);
-        Serial.println(" steps/sec");
+        Serial.println(F(" steps/sec"));
     }
     else
     {
-        Serial.println("Speed at minimum (100 steps/sec)");
+        Serial.println(F("Speed at minimum (100 steps/sec)"));
     }
 }
 
@@ -407,13 +396,13 @@ void MotorController::increaseAcceleration()
     {
         acceleration += Config::MotorController::ACCEL_STEP;
         driver.AMAX(acceleration);
-        Serial.print("Acceleration increased to: ");
+        Serial.print(F("Acceleration increased to: "));
         Serial.print(acceleration);
-        Serial.println(" steps/sec²");
+        Serial.println(F(" steps/sec²"));
     }
     else
     {
-        Serial.println("Acceleration at maximum (10000 steps/sec²)");
+        Serial.println(F("Acceleration at maximum (10000 steps/sec²)"));
     }
 }
 
@@ -423,13 +412,13 @@ void MotorController::decreaseAcceleration()
     {
         acceleration -= Config::MotorController::ACCEL_STEP;
         driver.AMAX(acceleration);
-        Serial.print("Acceleration decreased to: ");
+        Serial.print(F("Acceleration decreased to: "));
         Serial.print(acceleration);
-        Serial.println(" steps/sec²");
+        Serial.println(F(" steps/sec²"));
     }
     else
     {
-        Serial.println("Acceleration at minimum (100 steps/sec²)");
+        Serial.println(F("Acceleration at minimum (100 steps/sec²)"));
     }
 }
 
@@ -445,8 +434,8 @@ uint16_t MotorController::getAcceleration() const
 
 void MotorController::printStatusRegister(uint32_t status)
 {
-    Serial.println("\nDriver Status Register:");
-    Serial.print("Raw Status: 0x");
+    Serial.println(F("\nDriver Status Register:"));
+    Serial.print(F("Raw Status: 0x"));
     Serial.println(status, HEX);
     printErrorFlags(status);
     printStallGuardStatus(status);
@@ -455,167 +444,172 @@ void MotorController::printStatusRegister(uint32_t status)
 
 void MotorController::printErrorFlags(uint32_t status)
 {
-    Serial.println("\nError Flags:");
-    Serial.print("  Over Temperature: ");
-    Serial.println((status & 0x00000001) ? "Yes" : "No");
-    Serial.print("  Short to Ground A: ");
-    Serial.println((status & 0x00000002) ? "Yes" : "No");
-    Serial.print("  Short to Ground B: ");
-    Serial.println((status & 0x00000004) ? "Yes" : "No");
-    Serial.print("  Open Load A: ");
-    Serial.println((status & 0x00000008) ? "Yes" : "No");
-    Serial.print("  Open Load B: ");
-    Serial.println((status & 0x00000010) ? "Yes" : "No");
+    Serial.println(F("\nError Flags:"));
+    Serial.print(F("  Over Temperature: "));
+    Serial.println((status & 0x00000001) ? F("Yes") : F("No"));
+    Serial.print(F("  Short to Ground A: "));
+    Serial.println((status & 0x00000002) ? F("Yes") : F("No"));
+    Serial.print(F("  Short to Ground B: "));
+    Serial.println((status & 0x00000004) ? F("Yes") : F("No"));
+    Serial.print(F("  Open Load A: "));
+    Serial.println((status & 0x00000008) ? F("Yes") : F("No"));
+    Serial.print(F("  Open Load B: "));
+    Serial.println((status & 0x00000010) ? F("Yes") : F("No"));
 }
 
 void MotorController::printStallGuardStatus(uint32_t status)
 {
-    Serial.println("\nStallGuard Status:");
-    Serial.print("  StallGuard Value: ");
+    Serial.println(F("\nStallGuard Status:"));
+    Serial.print(F("  StallGuard Value: "));
     Serial.println((status >> 10) & 0x3FF);
-    Serial.print("  Stall Detected: ");
-    Serial.println((status & 0x00000200) ? "Yes" : "No");
+    Serial.print(F("  Stall Detected: "));
+    Serial.println((status & 0x00000200) ? F("Yes") : F("No"));
 }
 
 void MotorController::printDriverState(uint32_t status)
 {
-    Serial.println("\nDriver State:");
-    Serial.print("  Standstill: ");
-    Serial.println((status & 0x00000400) ? "Yes" : "No");
-    Serial.print("  Velocity Reached: ");
-    Serial.println((status & 0x00000800) ? "Yes" : "No");
-    Serial.print("  Position Reached: ");
-    Serial.println((status & 0x00001000) ? "Yes" : "No");
+    Serial.println(F("\nDriver State:"));
+    Serial.print(F("  Standstill: "));
+    Serial.println((status & 0x00000400) ? F("Yes") : F("No"));
+    Serial.print(F("  Velocity Reached: "));
+    Serial.println((status & 0x00000800) ? F("Yes") : F("No"));
+    Serial.print(F("  Position Reached: "));
+    Serial.println((status & 0x00001000) ? F("Yes") : F("No"));
 }
 
 void MotorController::printDriverStatus()
 {
     uint32_t status = driver.DRV_STATUS();
 
-    Serial.println("\n=== TMC5160 Driver Status Report ===");
-    Serial.println("=====================================");
+    Serial.println(F("🧠 DRV_STATUS Report"));
+    Serial.println(F("──────────────────────────────────────────────"));
 
-    // Basic Status
-    Serial.println("\n1. Basic Status:");
-    Serial.println("----------------");
-    Serial.print("  Raw Status Register: 0x");
-    Serial.println(status, HEX);
+    Serial.println(status & (1 << 31) ? F("✅ Standstill (stst)") : F("🌀 Motor moving"));
+    Serial.println(status & (1 << 30) ? F("❌ Open load on Phase B (olb)") : F("✅ Phase B OK"));
+    Serial.println(status & (1 << 29) ? F("❌ Open load on Phase A (ola)") : F("✅ Phase A OK"));
+    Serial.println(status & (1 << 28) ? F("❌ Short to GND on Phase B (s2gb)") : F("✅ Phase B GND OK"));
+    Serial.println(status & (1 << 27) ? F("❌ Short to GND on Phase A (s2ga)") : F("✅ Phase A GND OK"));
+    Serial.println(status & (1 << 26) ? F("⚠️  Overtemperature pre-warning (otpw)") : F("✅ Temp OK"));
+    Serial.println(status & (1 << 25) ? F("🔥 Overtemperature shutdown (ot)") : F("✅ Not overheated"));
+    Serial.println(status & (1 << 24) ? F("⚠️  StallGuard: Stall detected!") : F("✅ No stall"));
 
-    // Error Status
-    Serial.println("\n2. Error Status:");
-    Serial.println("----------------");
-    Serial.print("  Over Temperature: ");
-    Serial.println((status & 0x00000001) ? "WARNING - Temperature too high!" : "✅ OK");
-    Serial.print("  Short to Ground A: ");
-    Serial.println((status & 0x00000002) ? "❌ ERROR - Phase A shorted!" : "✅ OK");
-    Serial.print("  Short to Ground B: ");
-    Serial.println((status & 0x00000004) ? "❌ ERROR - Phase B shorted!" : "✅ OK");
-    Serial.print("  Open Load A: ");
-    Serial.println((status & 0x00000008) ? "❌ ERROR - Phase A open!" : "✅ OK");
-    Serial.print("  Open Load B: ");
-    Serial.println((status & 0x00000010) ? "❌ ERROR - Phase B open!" : "✅ OK");
+    Serial.println(status & (1 << 15) ? F("📦 Fullstep active (fsactive)") : F("⏩ Microstepping active"));
+    Serial.println(status & (1 << 14) ? F("🎧 StealthChop active (stealth)") : F("⚡ SpreadCycle active"));
 
-    // StallGuard Status
-    Serial.println("\n3. StallGuard Status:");
-    Serial.println("---------------------");
-    Serial.print("  StallGuard Value: ");
-    Serial.println((status >> 10) & 0x3FF);
-    Serial.print("  Stall Detected: ");
-    Serial.println((status & 0x00000200) ? "⚠️ WARNING - Motor stalled!" : "✅ OK");
+    Serial.println(status & (1 << 13) ? F("❌ Short to V+ on Phase B (s2vbs)") : F("✅ Phase B Supply OK"));
+    Serial.println(status & (1 << 12) ? F("❌ Short to V+ on Phase A (s2vsa)") : F("✅ Phase A Supply OK"));
 
-    // Driver State
-    Serial.println("\n4. Driver State:");
-    Serial.println("----------------");
-    Serial.print("  Standstill: ");
-    Serial.println((status & 0x00000400) ? "✅ Yes" : "❌ No");
-    Serial.print("  Velocity Reached: ");
-    Serial.println((status & 0x00000800) ? "✅ Yes" : "❌ No");
-    Serial.print("  Position Reached: ");
-    Serial.println((status & 0x00001000) ? "✅ Yes" : "❌ No");
+    uint8_t cs_actual = (status >> 17) & 0x0F;
+    Serial.print(F("CS_ACTUAL (current scaling): "));
+    Serial.println(cs_actual);
 
-    // Temperature
-    Serial.println("\n5. Temperature Status:");
-    Serial.println("----------------------");
-    int temp = getTemperature();
-    Serial.print("  Current Temperature: ");
-    Serial.print(temp);
-    Serial.println("°C");
-    if (temp > 60)
+    float current_mA = cs_actual / 32.0 * driver.rms_current();
+    Serial.print(F("Estimated actual current = "));
+    Serial.print(current_mA);
+    Serial.println(F(" mA"));
+
+    uint16_t sg_result = status & 0x03FF;
+    if (sg_result < 100)
     {
-        Serial.println("⚠️ WARNING: Temperature above 60°C!");
+        Serial.println(F("⚠️  Possible stall condition!"));
     }
-    else if (temp > 45)
+    else if (sg_result < 500)
     {
-        Serial.println("  NOTE: Temperature is getting high");
+        Serial.println(F("ℹ️  Moderate load"));
+    }
+    else
+    {
+        Serial.println(F("✅ Light load"));
     }
 
-    // Operating Mode
-    Serial.println("\n6. Operating Mode:");
-    Serial.println("------------------");
-    Serial.print("  StealthChop Mode: ");
-    Serial.println((driver.TPWMTHRS() == 0) ? "✅ Enabled" : "❌ Disabled");
-    Serial.print("  SpreadCycle Mode: ");
-    Serial.println((driver.TPWMTHRS() > 0) ? "✅ Enabled" : "❌ Disabled");
+    Serial.println(F("──────────────────────────────────────────────"));
+}
 
-    // Current Settings
-    Serial.println("\n7. Current Settings:");
-    Serial.println("-------------------");
-    Serial.print("  Run Current: ");
-    Serial.print(runCurrent);
-    Serial.println("mA");
-    Serial.print("  Hold Current: ");
-    Serial.print(holdCurrent);
-    Serial.println("mA");
+bool MotorController::diagnoseTMC5160()
+{
+    uint32_t status = driver.DRV_STATUS();
+    bool     ok     = true;
 
-    // Motion Settings
-    Serial.println("\n8. Motion Settings:");
-    Serial.println("-------------------");
-    Serial.print("  Speed: ");
-    Serial.print(speed);
-    Serial.println(" steps/sec");
-    Serial.print("  Acceleration: ");
-    Serial.print(acceleration);
-    Serial.println(" steps/sec²");
+    if (status & (1 << 27))
+    {
+        Serial.println(F("❌ ERROR: Short to GND on Phase A (s2ga)"));
+        ok = false;
+    }
 
-    Serial.println("\n=====================================");
+    if (status & (1 << 28))
+    {
+        Serial.println(F("❌ ERROR: Short to GND on Phase B (s2gb)"));
+        ok = false;
+    }
+
+    if (status & (1 << 12))
+    {
+        Serial.println(F("❌ ERROR: Short to supply on Phase A (s2vsa)"));
+        ok = false;
+    }
+
+    if (status & (1 << 13))
+    {
+        Serial.println(F("❌ ERROR: Short to supply on Phase B (s2vsb)"));
+        ok = false;
+    }
+
+    if (status & (1 << 25))
+    {
+        Serial.println(F("🔥 CRITICAL: Overtemperature shutdown active (ot)"));
+        ok = false;
+    }
+
+    if (status & (1 << 24))
+    {
+        Serial.println(F("⚠️  WARNING: Motor stall detected (StallGuard)"));
+        ok = false;
+    }
+
+    if (ok)
+    {
+        Serial.println(F("✅ All driver diagnostics OK."));
+    }
+
+    return ok;
 }
 
 void MotorController::printDriverConfig()
 {
-    Serial.println("\nDriver Configuration:");
-    Serial.println("-------------------");
-    Serial.print("  Run Current: ");
+    Serial.println(F("\nDriver Configuration:"));
+    Serial.println(F("-------------------"));
+    Serial.print(F("  Run Current: "));
     Serial.print(runCurrent);
-    Serial.println("mA");
-    Serial.print("  Hold Current: ");
+    Serial.println(F("mA"));
+    Serial.print(F("  Hold Current: "));
     Serial.print(holdCurrent);
-    Serial.println("mA");
-    Serial.print("  Microsteps: ");
+    Serial.println(F("mA"));
+    Serial.print(F("  Microsteps: "));
     Serial.println(16);
-    Serial.print("  Speed: ");
+    Serial.print(F("  Speed: "));
     Serial.print(speed);
-    Serial.println(" steps/sec");
-    Serial.print("  Acceleration: ");
+    Serial.println(F(" steps/sec"));
+    Serial.print(F("  Acceleration: "));
     Serial.print(acceleration);
-    Serial.println(" steps/sec²");
+    Serial.println(F(" steps/sec²"));
 
-    Serial.println("\nDriver Parameters:");
-    Serial.println("------------------");
-    Serial.print("  GCONF (Global Config): 0x");
+    Serial.println(F("\nDriver Parameters:"));
+    Serial.println(F("------------------"));
+    Serial.print(F("  GCONF (Global Config): 0x"));
     Serial.println(driver.GCONF(), HEX);
-    Serial.print("  TPOWERDOWN (Power Down Time): ");
+    Serial.print(F("  TPOWERDOWN (Power Down Time): "));
     Serial.print(driver.TPOWERDOWN());
-    Serial.println(" tclk");
-    Serial.print("  TSTEP (Current Step Timing): ");
+    Serial.println(F(" tclk"));
+    Serial.print(F("  TSTEP (Current Step Timing): "));
     Serial.print(driver.TSTEP());
-    Serial.println(" tclk");
-    Serial.print("  TPWMTHRS (StealthChop Threshold): ");
+    Serial.println(F(" tclk"));
+    Serial.print(F("  TPWMTHRS (StealthChop Threshold): "));
     Serial.print(driver.TPWMTHRS());
-    Serial.println(" tclk");
-    Serial.print("  THIGH (Step Pulse High Time): ");
+    Serial.println(F(" tclk"));
+    Serial.print(F("  THIGH (Step Pulse High Time): "));
     Serial.print(driver.THIGH());
-    Serial.println(" tclk");
-    Serial.print("  XDIRECT (Direct Coil Control): 0x");
+    Serial.println(F(" tclk"));
+    Serial.print(F("  XDIRECT (Direct Coil Control): 0x"));
     Serial.println(driver.XDIRECT(), HEX);
 }
 
@@ -643,7 +637,7 @@ void MotorController::printTemperature()
 void MotorController::checkStall()
 {
     uint32_t status = driver.DRV_STATUS();
-    if (status & Config::TMC5160T_Driver::STALL_BIT_MASK)
+    if (status & 0x00000200)
     {
         Serial.println("WARNING: Stall detected!");
         stop();  // Stop motor on stall
@@ -707,7 +701,7 @@ bool MotorController::testCommunication(bool enableMessage)
 
     if (enableMessage)
     {
-        Serial.print("✅ Ok\n");
+        Serial.println(F("✅ Ok\n"));
         // Serial.print("  ✅ GCONF: 0x");
         // Serial.println(gconf, HEX);
         // Serial.print("  ✅ DRV_STATUS: 0x");

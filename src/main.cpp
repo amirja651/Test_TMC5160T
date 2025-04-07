@@ -47,7 +47,7 @@ void serialTask(void* pvParameters)
                     {
                         if (strlen(inputBuffer) < 5)  // Changed from 9 to 5 (m 1 w = 5 chars)
                         {
-                            Serial.println("❌ Invalid command. Use h/? for help");
+                            Serial.println(F("❌ Invalid command. Use h/? for help"));
                             bufferIndex = 0;
                             continue;
                         }
@@ -57,15 +57,16 @@ void serialTask(void* pvParameters)
 
                         if (motorNum < 1 || motorNum > Config::TMC5160T_Driver::NUM_MOTORS)
                         {
-                            Serial.println("❌ Invalid motor number (1-" + String(Config::TMC5160T_Driver::NUM_MOTORS) +
-                                           ")");
+                            Serial.print(F("❌ Invalid motor number (1-"));
+                            Serial.print(Config::TMC5160T_Driver::NUM_MOTORS);
+                            Serial.println(F(")"));
                             bufferIndex = 0;
                             continue;
                         }
 
                         if (!CommandHandler::getInstance().isValidMotorCommand(cmd))
                         {
-                            Serial.println("❌ Invalid command. Use h/? for help");
+                            Serial.println(F("❌ Invalid command. Use h/? for help"));
                             bufferIndex = 0;
                             continue;
                         }
@@ -74,7 +75,7 @@ void serialTask(void* pvParameters)
                     // Send command to queue
                     if (xQueueSend(commandQueue, inputBuffer, portMAX_DELAY) != pdPASS)
                     {
-                        Serial.println("❌ Failed to send command to queue");
+                        Serial.println(F("❌ Failed to send command to queue"));
                     }
 
                     bufferIndex = 0;
@@ -99,7 +100,7 @@ void commandTask(void* pvParameters)
         if (xQueueReceive(commandQueue, inputBuffer, portMAX_DELAY) == pdPASS)
         {
             // Echo the command back to the user
-            Serial.print("Command received: ");
+            Serial.print(F("Command received: "));
             Serial.println(inputBuffer);
             Serial.println();
 
@@ -112,7 +113,7 @@ void commandTask(void* pvParameters)
             }
             else
             {
-                Serial.println("❌ Invalid command format. Enter h/? for help");
+                Serial.println(F("❌ Invalid command format. Enter h/? for help"));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -191,13 +192,13 @@ void setup()
     {
         delay(10);
     }
-    Serial.println("\n ==================== Initializing motor controllers ====================");
+    Serial.println(F("\n ==================== Initializing motor controllers ===================="));
 
     // Create command queue with proper size
     commandQueue = xQueueCreate(10, COMMAND_BUFFER_SIZE);
     if (commandQueue == NULL)
     {
-        Serial.println("Failed to create command queue ❌");
+        Serial.println(F("Failed to create command queue ❌"));
         while (1)
             ;
     }
@@ -232,11 +233,11 @@ void loop()
     if (encoder.update())
     {
         // Print position only when it changes
-        Serial.print("Position: ");
+        Serial.print(F("Position: "));
         Serial.print(encoder.getPositionDegrees(), 2);
-        Serial.print("° (Pulse width: ");
+        Serial.print(F("° (Pulse width: "));
         Serial.print(encoder.getPulseWidth());
-        Serial.println(" μs)");
+        Serial.println(F(" μs)"));
     }
 
     // Small delay to prevent overwhelming the serial output

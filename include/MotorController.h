@@ -66,6 +66,12 @@ public:
     void setStealthChopMode(bool enable);  // Set stealth chop mode
 
     /**
+     * @brief Diagnose the TMC5160 driver
+     * @return true if the driver is healthy, false otherwise
+     */
+    bool diagnoseTMC5160();
+
+    /**
      * @brief Performs a basic SPI communication test
      * Sends a test pattern (0x55) to verify SPI communication
      * @param enableMessage Whether to print messages to the serial monitor
@@ -163,14 +169,13 @@ public:
 
 private:
     // Internal configuration methods
-    void configureDriver();                                  // Configure driver parameters
-    void setupPins();                                        // Setup GPIO pins
-    void step();                                             // Execute single step
-    bool checkAndReinitializeDriver();                       // Check and reinitialize driver if needed
-    void handlePowerLoss();                                  // Handle power loss situation
-    void checkStall();                                       // Check for motor stall condition
-    bool checkDriveVoltageError(bool enableMessage = true);  // Check for drive voltage error
-    void setMovementDirection(bool forward);                 // Set movement direction and update state
+    void configureDriver();                   // Configure driver parameters
+    void setupPins();                         // Setup GPIO pins
+    void step();                              // Execute single step
+    bool checkAndReinitializeDriver();        // Check and reinitialize driver if needed
+    void handlePowerLoss();                   // Handle power loss situation
+    void checkStall();                        // Check for motor stall condition
+    void setMovementDirection(bool forward);  // Set movement direction and update state
 
     // Driver instance and state variables
     TMC5160Stepper driver;        // TMC5160 driver instance

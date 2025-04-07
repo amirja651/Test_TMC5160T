@@ -7,7 +7,8 @@
 // Command type definitions
 enum class CommandType
 {
-    MOTOR_MOVE,
+    MOTOR_FORWARD,
+    MOTOR_REVERSE,
     MOTOR_STOP,
     DRIVER_SPI_TEST,
     DRIVER_STATUS,
