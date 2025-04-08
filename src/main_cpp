@@ -1,34 +1,6 @@
-/**
- * High Precision Motion Control for ESP32 with Stepper Motor and Encoder Feedback
- * Components:
- * - Nema 11 Stepper Motor (1.8deg, 200 steps/rev)
- * - Magnetic Encoder (1000PPR/4000CPR)
- * - Stepper Driver with microstepping
- * - ESP32 Controller
- * - Linear Stage with Ultra-Fine-Thread Ball-Point Set Screw
- *
- * Target precision: < 1 micrometer
- */
-
-#include <Arduino.h>
 #include "CommandHandler.h"
 #include "Config.h"
-#include "ESP32Encoder.h"
-#include "LimitSwitch.h"
 #include "MAE3Encoder.h"
-#include "MotionController.h"
-#include "PIDController.h"
-#include "StatusReporter.h"
-#include "StepperMotor.h"
-#include "Types.h"
-
-// Create instances of system components
-MotionSystem::ESP32Encoder     encoder;
-MotionSystem::StepperMotor     motor;
-MotionSystem::LimitSwitch      limitSwitch;
-MotionSystem::PIDController    pidController(&encoder);
-MotionSystem::StatusReporter   statusReporter(&encoder, &pidController, &limitSwitch);
-MotionSystem::MotionController motionController(&encoder, &motor, &pidController, &limitSwitch, &statusReporter);
 
 // Task handles
 TaskHandle_t serialTaskHandle       = NULL;
@@ -40,9 +12,6 @@ TaskHandle_t motorUpdateTaskHandle3 = NULL;
 
 // Queue for serial commands
 QueueHandle_t commandQueue;
-
-// Create encoder instance on pin 36
-MAE3Encoder encoder2(35);
 
 // Command buffer size
 #define COMMAND_BUFFER_SIZE 32
@@ -207,6 +176,9 @@ void motorUpdateTask3(void* pvParameters)
     }
 }
 
+// Create encoder instance on pin 36
+MAE3Encoder encoder(35);
+
 /**
  * @brief Initial setup of the system
  * Configures serial communication, SPI interface, and motor controller
@@ -220,13 +192,7 @@ void setup()
     {
         delay(10);
     }
-
-    Serial.println(F("\n ==================== Initializing High Precision Motion Control System ===================="));
-
-    motionController.init();
-    pidController.startTask();
-    motionController.startTask();
-    statusReporter.startTask();
+    Serial.println(F("\n ==================== Initializing motor controllers ===================="));
 
     // Create command queue with proper size
     commandQueue = xQueueCreate(10, COMMAND_BUFFER_SIZE);
@@ -254,29 +220,26 @@ void setup()
     vTaskStartScheduler();
 
     // Initialize encoder
-    encoder2.begin();
-
-    // Allow time for tasks to start
-    delay(100);
+    encoder.begin();
 }
 
+/**
+ * @brief Main program loop
+ * Handles serial command processing and motor controller updates
+ */
 void loop()
 {
-    // Process commands from serial port
-    motionController.processCommands();
-
     // Update encoder position
-    if (encoder2.update())
+    if (encoder.update())
     {
         // Print position only when it changes
         Serial.print(F("Position: "));
-        Serial.print(encoder2.getPositionDegrees(), 2);
+        Serial.print(encoder.getPositionDegrees(), 2);
         Serial.print(F("° (Pulse width: "));
-        Serial.print(encoder2.getPulseWidth());
+        Serial.print(encoder.getPulseWidth());
         Serial.println(F(" μs)"));
     }
 
     // Small delay to prevent overwhelming the serial output
-    // Main loop runs at lower priority
     delay(10);
 }

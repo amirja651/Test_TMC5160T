@@ -106,4 +106,84 @@ namespace Config
 
 };  // namespace Config
 
+namespace MotionSystem
+{
+
+    /**
+     * System configuration and parameters
+     */
+    namespace Config
+    {
+        // Pin definitions
+        namespace Pins
+        {
+            // Motor and driver pins
+            constexpr uint8_t STEP_PIN   = 32;
+            constexpr uint8_t DIR_PIN    = 33;
+            constexpr uint8_t ENABLE_PIN = 14;
+
+            // Encoder pins for position feedback
+            constexpr uint8_t ENCODER_A_PIN     = 22;
+            constexpr uint8_t ENCODER_B_PIN     = 23;
+            constexpr uint8_t ENCODER_INDEX_PIN = 21;
+
+            // Limit switch pin
+            constexpr uint8_t LIMIT_SWITCH_PIN = 13;
+        }  // namespace Pins
+
+        // System parameters
+        namespace System
+        {
+            constexpr uint8_t  MICROSTEPS               = 16;     // Microstepping configuration
+            constexpr uint16_t STEPS_PER_REV            = 200;    // Motor steps per revolution
+            constexpr uint16_t ENCODER_PPR              = 1000;   // Pulses per revolution (4000 CPR with quadrature)
+            constexpr float    LEAD_SCREW_PITCH         = 0.5f;   // Lead screw pitch in mm
+            constexpr float    PIXEL_SIZE               = 5.2f;   // Size of one pixel in micrometers
+            constexpr float    TOTAL_TRAVEL_MM          = 30.0f;  // Total travel distance in mm
+            constexpr float    TOTAL_TRAVEL_MICRONS     = TOTAL_TRAVEL_MM * 1000.0f;
+            constexpr float    REL_TRAVEL_LIMIT_MM      = 3.0f;  // Relative travel limit in mm
+            constexpr float    REL_TRAVEL_LIMIT_MICRONS = REL_TRAVEL_LIMIT_MM * 1000.0f;
+            constexpr uint16_t STATUS_UPDATE_MS         = 400;  // Status update interval in milliseconds
+
+            // Derived constants
+            constexpr float MOTOR_STEPS_PER_MICRON    = (STEPS_PER_REV * MICROSTEPS) / (LEAD_SCREW_PITCH * 1000.0f);
+            constexpr float ENCODER_COUNTS_PER_MICRON = (ENCODER_PPR * 4.0f) / (LEAD_SCREW_PITCH * 1000.0f);
+        }  // namespace System
+
+        // Motion control parameters
+        namespace Motion
+        {
+            constexpr uint16_t MAX_SPEED       = 5000;   // Maximum step frequency in Hz
+            constexpr uint16_t ACCELERATION    = 10000;  // Steps per second per second
+            constexpr uint16_t PID_UPDATE_FREQ = 1000;   // PID update frequency in Hz
+        }  // namespace Motion
+
+        // PID Controller parameters
+        namespace PID
+        {
+            constexpr float    KP           = 1.2f;   // 0.8f   // Proportional gain
+            constexpr float    KI           = 0.15f;  // 0.1f;  // Integral gain
+            constexpr float    KD           = 0.08f;  // 0.05f  // Derivative gain
+            constexpr uint16_t MAX_INTEGRAL = 1000;   // Anti-windup limit
+        }  // namespace PID
+
+        // Task parameters
+        namespace Tasks
+        {
+            constexpr uint16_t PID_TASK_STACK_SIZE = 4096;
+            constexpr uint8_t  PID_TASK_PRIORITY   = 3;
+            constexpr uint8_t  PID_TASK_CORE       = 1;
+
+            constexpr uint16_t MOTION_TASK_STACK_SIZE = 4096;
+            constexpr uint8_t  MOTION_TASK_PRIORITY   = 2;
+            constexpr uint8_t  MOTION_TASK_CORE       = 1;
+
+            constexpr uint16_t STATUS_TASK_STACK_SIZE = 4096;
+            constexpr uint8_t  STATUS_TASK_PRIORITY   = 1;
+            constexpr uint8_t  STATUS_TASK_CORE       = 0;
+        }  // namespace Tasks
+    }  // namespace Config
+
+}  // namespace MotionSystem
+
 #endif  // CONFIG_H

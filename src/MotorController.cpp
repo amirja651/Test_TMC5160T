@@ -5,6 +5,7 @@
 MotorController::MotorController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
                                  uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)
     : driver(csPin, mosiPin, misoPin, sckPin),
+      instanceName(name),
       csPin(csPin),
       stepPin(stepPin),
       dirPin(dirPin),
@@ -12,13 +13,6 @@ MotorController::MotorController(const char* name, uint8_t csPin, uint8_t stepPi
       mosiPin(mosiPin),
       misoPin(misoPin),
       sckPin(sckPin),
-      instanceName(name),
-      isMoving(false),
-      direction(true),
-      diagnosticsEnabled(false),
-      stallGuardFilter(true),
-      spreadCycleEnabled(false),
-      microstepInterpolation(true),
       stepDelay(500),
       lastStepTime(0),
       stepCounter(0),
@@ -34,7 +28,13 @@ MotorController::MotorController(const char* name, uint8_t csPin, uint8_t stepPi
       coolStepThreshold(1000),
       stallGuardThreshold(10),
       currentHoldDelay(6),
-      rampMode(0)  // Default to positioning mode
+      rampMode(0),  // Default to positioning mode
+      isMoving(false),
+      direction(true),
+      diagnosticsEnabled(false),
+      stallGuardFilter(true),
+      spreadCycleEnabled(false),
+      microstepInterpolation(true)
 {
 }
 
@@ -45,196 +45,6 @@ void MotorController::begin()
     disableSPI();
     resetDriverState();
     configureDriver2();
-}
-
-// Configure GPIO pins for motor control
-void MotorController::setupPins()
-{
-    pinMode(stepPin, OUTPUT);
-    pinMode(dirPin, OUTPUT);
-    pinMode(enPin, OUTPUT);
-    pinMode(csPin, OUTPUT);
-    delay(5);
-}
-
-// Deactivates the SPI device by setting CS pin high
-void MotorController::disableSPI()
-{
-    digitalWrite(csPin, HIGH);
-    delay(5);
-}
-
-// Activates the SPI device by setting CS pin low
-void MotorController::enableSPI()
-{
-    digitalWrite(csPin, LOW);
-    delay(5);
-}
-
-void MotorController::resetDriverState()
-{
-    disableDriver();
-    enableDriver();
-}
-
-// Configure TMC5160 driver parameters for medical-grade precision
-void MotorController::configureDriver2()
-{
-    driver.begin();
-    delay(5);
-
-    // ✅ Set GCONF with bitmask to enable important features
-    uint32_t gconf = 0;
-    gconf |= (1 << 0);  // Enable internal RSense
-    gconf |= (1 << 2);  // Enable StealthChop
-    gconf |= (1 << 3);  // Enable microstep interpolation
-    gconf |= (1 << 4);  // Double edge step
-    gconf |= (1 << 6);  // Enable multi-step filtering
-    driver.GCONF(gconf);
-    delay(5);
-
-    // ✅ Fine-tune currents
-    driver.rms_current(runCurrent);       // RMS current while running
-    driver.ihold(holdCurrent);            // Holding current
-    driver.irun(runCurrent);              // Running current
-    driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
-    driver.TPOWERDOWN(10);                // Motor shutdown time
-
-    // ✅ Microstepping setting
-    driver.microsteps(16);
-    driver.intpol(microstepInterpolation);
-
-    // ✅ CoolStep activation and setting
-    driver.TCOOLTHRS(coolStepThreshold);  // CoolStep / StallGuard activation threshold
-    driver.semin(5);                      // CoolStep activation (value > 0)
-    driver.semax(2);                      // Maximum current increase level
-    driver.seup(0b01);                    // Current increase rate
-    driver.sedn(0b01);                    // Current decrease rate
-    driver.sgt(stallGuardThreshold);      // StallGuard sensitivity
-    driver.sfilt(stallGuardFilter);       // Enable pager filter (1 = filter on)
-
-    // ✅ Enable StealthChop with PWM tuning
-    driver.TPWMTHRS(0);          // StealthChop always on
-    driver.pwm_autoscale(true);  // Enable current auto-tuning
-    driver.pwm_autograd(true);   // Enable auto-grading
-    driver.pwm_ofs(36);
-    driver.pwm_grad(14);
-    driver.pwm_freq(1);
-
-    // ✅ Select current control mode (StealthChop vs SpreadCycle)
-    driver.en_pwm_mode(!spreadCycleEnabled);  // true = StealthChop, false = SpreadCycle
-
-    // ✅ SpreadCycle settings (if Spread is enabled)
-    driver.toff(5);  // Chopper activation
-    driver.blank_time(24);
-    driver.hysteresis_start(5);
-    driver.hysteresis_end(3);
-
-    // ✅ Motion control (acceleration and speed profile)
-    driver.RAMPMODE(rampMode);
-    driver.VSTART(0);       // Start from zero speed
-    driver.VMAX(maxSpeed);  // Maximum speed
-    driver.VSTOP(10);       // Soft stop, recommended: 5–10
-    driver.AMAX(maxAcceleration);
-    driver.DMAX(maxDeceleration);
-    driver.a1(maxAcceleration);
-    driver.v1(maxSpeed / 2);
-    driver.d1(maxDeceleration);
-
-    // ✅ Final driver activation
-    enableDriver();
-    delay(5);
-}
-
-// Configure TMC5160 driver parameters for medical-grade precision
-void MotorController::configureDriver()
-{
-    driver.begin();
-    delay(5);
-
-    // Configure GCONF register for optimal performance
-    uint32_t gconf = 0;
-    gconf |= (1 << 0);  // Enable internal RSense
-    gconf |= (1 << 2);  // Enable stealthChop
-    gconf |= (1 << 3);  // Enable microstep interpolation
-    gconf |= (1 << 4);  // Enable double edge step
-    gconf |= (1 << 6);  // Enable multistep filtering
-    driver.GCONF(gconf);
-    delay(5);
-
-    // Set current control parameters
-    driver.rms_current(runCurrent);
-    driver.ihold(holdCurrent);
-    driver.irun(runCurrent);
-    driver.iholddelay(currentHoldDelay);
-    driver.TPOWERDOWN(10);
-
-    // Configure microstepping
-    driver.microsteps(16);
-    driver.intpol(microstepInterpolation);
-
-    // Configure CoolStep
-    driver.TCOOLTHRS(coolStepThreshold);
-    driver.sgt(stallGuardThreshold);
-    driver.sfilt(stallGuardFilter);
-    driver.sgt(stallGuardThreshold);
-
-    // Configure stealthChop
-    driver.TPWMTHRS(0);  // Enable stealthChop by default
-    driver.pwm_autoscale(true);
-    driver.pwm_autograd(true);
-    driver.pwm_ofs(36);
-    driver.pwm_grad(14);
-    driver.pwm_freq(1);
-
-    // Configure spreadCycle
-    driver.en_pwm_mode(!spreadCycleEnabled);  // 0 for spread cycle, 1 for stealthChop
-    driver.toff(5);
-    driver.blank_time(24);
-    driver.hysteresis_start(5);
-    driver.hysteresis_end(3);
-
-    // Configure motion control
-    driver.RAMPMODE(rampMode);
-    driver.VMAX(maxSpeed);
-    driver.AMAX(maxAcceleration);
-    driver.DMAX(maxDeceleration);
-    driver.a1(maxAcceleration);
-    driver.v1(maxSpeed / 2);
-    driver.d1(maxDeceleration);
-    driver.VSTART(0);
-    driver.VSTOP(5);
-
-    enableDriver();
-    delay(5);
-}
-
-// Check driver status and reinitialize if needed
-bool MotorController::checkAndReinitializeDriver()
-{
-    uint32_t status = driver.DRV_STATUS();
-    if (status == 0 || status == 0xFFFFFFFF)
-    {
-        // handle PowerLoss
-        disableDriver();
-        disableSPI();
-        enableSPI();
-
-        // Reconfigure driver
-        configureDriver2();
-        return true;
-    }
-    return false;
-}
-
-void MotorController::setMovementDirection(bool forward)
-{
-    isMoving  = true;
-    direction = forward;
-    digitalWrite(dirPin, direction ? HIGH : LOW);
-    delay(5);
-    Serial.print(F("Moving "));
-    Serial.println(forward ? F("Forward") : F("Reverse"));
 }
 
 // Start motor movement in forward direction
@@ -264,16 +74,6 @@ void MotorController::stop()
 {
     isMoving = false;
     driver.ihold(100);  // Reduce to ultra low hold current
-}
-
-// Execute a single step
-void MotorController::step()
-{
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(stepPin, LOW);
-    lastStepTime = micros();
-    stepCounter  = (stepCounter + 1) % 1000;
 }
 
 // Main update loop for motor control
@@ -562,51 +362,6 @@ uint16_t MotorController::getAcceleration() const
     return acceleration;
 }
 
-void MotorController::printStatusRegister(uint32_t status)
-{
-    Serial.println(F("\nDriver Status Register:"));
-    Serial.print(F("Raw Status: 0x"));
-    Serial.println(status, HEX);
-    printErrorFlags(status);
-    printStallGuardStatus(status);
-    printDriverState(status);
-}
-
-void MotorController::printErrorFlags(uint32_t status)
-{
-    Serial.println(F("\nError Flags:"));
-    Serial.print(F("  Over Temperature: "));
-    Serial.println((status & 0x00000001) ? F("Yes") : F("No"));
-    Serial.print(F("  Short to Ground A: "));
-    Serial.println((status & 0x00000002) ? F("Yes") : F("No"));
-    Serial.print(F("  Short to Ground B: "));
-    Serial.println((status & 0x00000004) ? F("Yes") : F("No"));
-    Serial.print(F("  Open Load A: "));
-    Serial.println((status & 0x00000008) ? F("Yes") : F("No"));
-    Serial.print(F("  Open Load B: "));
-    Serial.println((status & 0x00000010) ? F("Yes") : F("No"));
-}
-
-void MotorController::printStallGuardStatus(uint32_t status)
-{
-    Serial.println(F("\nStallGuard Status:"));
-    Serial.print(F("  StallGuard Value: "));
-    Serial.println((status >> 10) & 0x3FF);
-    Serial.print(F("  Stall Detected: "));
-    Serial.println((status & 0x00000200) ? F("Yes") : F("No"));
-}
-
-void MotorController::printDriverState(uint32_t status)
-{
-    Serial.println(F("\nDriver State:"));
-    Serial.print(F("  Standstill: "));
-    Serial.println((status & 0x00000400) ? F("Yes") : F("No"));
-    Serial.print(F("  Velocity Reached: "));
-    Serial.println((status & 0x00000800) ? F("Yes") : F("No"));
-    Serial.print(F("  Position Reached: "));
-    Serial.println((status & 0x00001000) ? F("Yes") : F("No"));
-}
-
 void MotorController::printDriverStatus()
 {
     uint32_t status = driver.DRV_STATUS();
@@ -653,55 +408,6 @@ void MotorController::printDriverStatus()
     }
 
     Serial.println(F("──────────────────────────────────────────────"));
-}
-
-bool MotorController::diagnoseTMC5160()
-{
-    uint32_t status = driver.DRV_STATUS();
-    bool     ok     = true;
-
-    if (status & (1 << 27))
-    {
-        Serial.println(F("❌ ERROR: Short to GND on Phase A (s2ga)"));
-        ok = false;
-    }
-
-    if (status & (1 << 28))
-    {
-        Serial.println(F("❌ ERROR: Short to GND on Phase B (s2gb)"));
-        ok = false;
-    }
-
-    if (status & (1 << 12))
-    {
-        Serial.println(F("❌ ERROR: Short to supply on Phase A (s2vsa)"));
-        ok = false;
-    }
-
-    if (status & (1 << 13))
-    {
-        Serial.println(F("❌ ERROR: Short to supply on Phase B (s2vsb)"));
-        ok = false;
-    }
-
-    if (status & (1 << 25))
-    {
-        Serial.println(F("🔥 CRITICAL: Overtemperature shutdown active (ot)"));
-        ok = false;
-    }
-
-    if (status & (1 << 24))
-    {
-        Serial.println(F("⚠️  WARNING: Motor stall detected (StallGuard)"));
-        ok = false;
-    }
-
-    if (ok)
-    {
-        Serial.println(F("✅ All driver diagnostics OK."));
-    }
-
-    return ok;
 }
 
 void MotorController::printDriverConfig()
@@ -797,6 +503,55 @@ void MotorController::setStealthChopMode(bool enable)
     }
 }
 
+bool MotorController::diagnoseTMC5160()
+{
+    uint32_t status = driver.DRV_STATUS();
+    bool     ok     = true;
+
+    if (status & (1 << 27))
+    {
+        Serial.println(F("❌ ERROR: Short to GND on Phase A (s2ga)"));
+        ok = false;
+    }
+
+    if (status & (1 << 28))
+    {
+        Serial.println(F("❌ ERROR: Short to GND on Phase B (s2gb)"));
+        ok = false;
+    }
+
+    if (status & (1 << 12))
+    {
+        Serial.println(F("❌ ERROR: Short to supply on Phase A (s2vsa)"));
+        ok = false;
+    }
+
+    if (status & (1 << 13))
+    {
+        Serial.println(F("❌ ERROR: Short to supply on Phase B (s2vsb)"));
+        ok = false;
+    }
+
+    if (status & (1 << 25))
+    {
+        Serial.println(F("🔥 CRITICAL: Overtemperature shutdown active (ot)"));
+        ok = false;
+    }
+
+    if (status & (1 << 24))
+    {
+        Serial.println(F("⚠️  WARNING: Motor stall detected (StallGuard)"));
+        ok = false;
+    }
+
+    if (ok)
+    {
+        Serial.println(F("✅ All driver diagnostics OK."));
+    }
+
+    return ok;
+}
+
 // Performs a basic SPI communication test by sending a test pattern
 bool MotorController::testCommunication(bool enableMessage)
 {
@@ -843,6 +598,26 @@ void MotorController::disableDriver()
     digitalWrite(enPin, HIGH);
 }
 
+// Activates the SPI device by setting CS pin low
+void MotorController::enableSPI()
+{
+    digitalWrite(csPin, LOW);
+    delay(5);
+}
+
+// Deactivates the SPI device by setting CS pin high
+void MotorController::disableSPI()
+{
+    digitalWrite(csPin, HIGH);
+    delay(5);
+}
+
+void MotorController::resetDriverState()
+{
+    disableDriver();
+    enableDriver();
+}
+
 void MotorController::setSpreadCycle(bool enable)
 {
     spreadCycleEnabled = enable;
@@ -872,4 +647,230 @@ void MotorController::setMaxDeceleration(uint32_t decel)
 {
     maxDeceleration = decel;
     driver.d1(decel);
+}
+
+// Configure TMC5160 driver parameters for medical-grade precision
+void MotorController::configureDriver2()
+{
+    driver.begin();
+    delay(5);
+
+    // ✅ Set GCONF with bitmask to enable important features
+    uint32_t gconf = 0;
+    gconf |= (1 << 0);  // Enable internal RSense
+    gconf |= (1 << 2);  // Enable StealthChop
+    gconf |= (1 << 3);  // Enable microstep interpolation
+    gconf |= (1 << 4);  // Double edge step
+    gconf |= (1 << 6);  // Enable multi-step filtering
+    driver.GCONF(gconf);
+    delay(5);
+
+    // ✅ Fine-tune currents
+    driver.rms_current(runCurrent);       // RMS current while running
+    driver.ihold(holdCurrent);            // Holding current
+    driver.irun(runCurrent);              // Running current
+    driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
+    driver.TPOWERDOWN(10);                // Motor shutdown time
+
+    // ✅ Microstepping setting
+    driver.microsteps(16);
+    driver.intpol(microstepInterpolation);
+
+    // ✅ CoolStep activation and setting
+    driver.TCOOLTHRS(coolStepThreshold);  // CoolStep / StallGuard activation threshold
+    driver.semin(5);                      // CoolStep activation (value > 0)
+    driver.semax(2);                      // Maximum current increase level
+    driver.seup(0b01);                    // Current increase rate
+    driver.sedn(0b01);                    // Current decrease rate
+    driver.sgt(stallGuardThreshold);      // StallGuard sensitivity
+    driver.sfilt(stallGuardFilter);       // Enable pager filter (1 = filter on)
+
+    // ✅ Enable StealthChop with PWM tuning
+    driver.TPWMTHRS(0);          // StealthChop always on
+    driver.pwm_autoscale(true);  // Enable current auto-tuning
+    driver.pwm_autograd(true);   // Enable auto-grading
+    driver.pwm_ofs(36);
+    driver.pwm_grad(14);
+    driver.pwm_freq(1);
+
+    // ✅ Select current control mode (StealthChop vs SpreadCycle)
+    driver.en_pwm_mode(!spreadCycleEnabled);  // true = StealthChop, false = SpreadCycle
+
+    // ✅ SpreadCycle settings (if Spread is enabled)
+    driver.toff(5);  // Chopper activation
+    driver.blank_time(24);
+    driver.hysteresis_start(5);
+    driver.hysteresis_end(3);
+
+    // ✅ Motion control (acceleration and speed profile)
+    driver.RAMPMODE(rampMode);
+    driver.VSTART(0);       // Start from zero speed
+    driver.VMAX(maxSpeed);  // Maximum speed
+    driver.VSTOP(10);       // Soft stop, recommended: 5–10
+    driver.AMAX(maxAcceleration);
+    driver.DMAX(maxDeceleration);
+    driver.a1(maxAcceleration);
+    driver.v1(maxSpeed / 2);
+    driver.d1(maxDeceleration);
+
+    // ✅ Final driver activation
+    enableDriver();
+    delay(5);
+}
+
+// Configure TMC5160 driver parameters for medical-grade precision
+void MotorController::configureDriver()
+{
+    driver.begin();
+    delay(5);
+
+    // Configure GCONF register for optimal performance
+    uint32_t gconf = 0;
+    gconf |= (1 << 0);  // Enable internal RSense
+    gconf |= (1 << 2);  // Enable stealthChop
+    gconf |= (1 << 3);  // Enable microstep interpolation
+    gconf |= (1 << 4);  // Enable double edge step
+    gconf |= (1 << 6);  // Enable multistep filtering
+    driver.GCONF(gconf);
+    delay(5);
+
+    // Set current control parameters
+    driver.rms_current(runCurrent);
+    driver.ihold(holdCurrent);
+    driver.irun(runCurrent);
+    driver.iholddelay(currentHoldDelay);
+    driver.TPOWERDOWN(10);
+
+    // Configure microstepping
+    driver.microsteps(16);
+    driver.intpol(microstepInterpolation);
+
+    // Configure CoolStep
+    driver.TCOOLTHRS(coolStepThreshold);
+    driver.sgt(stallGuardThreshold);
+    driver.sfilt(stallGuardFilter);
+    driver.sgt(stallGuardThreshold);
+
+    // Configure stealthChop
+    driver.TPWMTHRS(0);  // Enable stealthChop by default
+    driver.pwm_autoscale(true);
+    driver.pwm_autograd(true);
+    driver.pwm_ofs(36);
+    driver.pwm_grad(14);
+    driver.pwm_freq(1);
+
+    // Configure spreadCycle
+    driver.en_pwm_mode(!spreadCycleEnabled);  // 0 for spread cycle, 1 for stealthChop
+    driver.toff(5);
+    driver.blank_time(24);
+    driver.hysteresis_start(5);
+    driver.hysteresis_end(3);
+
+    // Configure motion control
+    driver.RAMPMODE(rampMode);
+    driver.VMAX(maxSpeed);
+    driver.AMAX(maxAcceleration);
+    driver.DMAX(maxDeceleration);
+    driver.a1(maxAcceleration);
+    driver.v1(maxSpeed / 2);
+    driver.d1(maxDeceleration);
+    driver.VSTART(0);
+    driver.VSTOP(5);
+
+    enableDriver();
+    delay(5);
+}
+
+// Configure GPIO pins for motor control
+void MotorController::setupPins()
+{
+    pinMode(stepPin, OUTPUT);
+    pinMode(dirPin, OUTPUT);
+    pinMode(enPin, OUTPUT);
+    pinMode(csPin, OUTPUT);
+    delay(5);
+}
+
+// Execute a single step
+void MotorController::step()
+{
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(stepPin, LOW);
+    lastStepTime = micros();
+    stepCounter  = (stepCounter + 1) % 1000;
+}
+
+// Check driver status and reinitialize if needed
+bool MotorController::checkAndReinitializeDriver()
+{
+    uint32_t status = driver.DRV_STATUS();
+    if (status == 0 || status == 0xFFFFFFFF)
+    {
+        // handle PowerLoss
+        disableDriver();
+        disableSPI();
+        enableSPI();
+
+        // Reconfigure driver
+        configureDriver2();
+        return true;
+    }
+    return false;
+}
+
+void MotorController::setMovementDirection(bool forward)
+{
+    isMoving  = true;
+    direction = forward;
+    digitalWrite(dirPin, direction ? HIGH : LOW);
+    delay(5);
+    Serial.print(F("Moving "));
+    Serial.println(forward ? F("Forward") : F("Reverse"));
+}
+
+// Status printing helper methods
+void MotorController::printStatusRegister(uint32_t status)
+{
+    Serial.println(F("\nDriver Status Register:"));
+    Serial.print(F("Raw Status: 0x"));
+    Serial.println(status, HEX);
+    printErrorFlags(status);
+    printStallGuardStatus(status);
+    printDriverState(status);
+}
+
+void MotorController::printErrorFlags(uint32_t status)
+{
+    Serial.println(F("\nError Flags:"));
+    Serial.print(F("  Over Temperature: "));
+    Serial.println((status & 0x00000001) ? F("Yes") : F("No"));
+    Serial.print(F("  Short to Ground A: "));
+    Serial.println((status & 0x00000002) ? F("Yes") : F("No"));
+    Serial.print(F("  Short to Ground B: "));
+    Serial.println((status & 0x00000004) ? F("Yes") : F("No"));
+    Serial.print(F("  Open Load A: "));
+    Serial.println((status & 0x00000008) ? F("Yes") : F("No"));
+    Serial.print(F("  Open Load B: "));
+    Serial.println((status & 0x00000010) ? F("Yes") : F("No"));
+}
+
+void MotorController::printStallGuardStatus(uint32_t status)
+{
+    Serial.println(F("\nStallGuard Status:"));
+    Serial.print(F("  StallGuard Value: "));
+    Serial.println((status >> 10) & 0x3FF);
+    Serial.print(F("  Stall Detected: "));
+    Serial.println((status & 0x00000200) ? F("Yes") : F("No"));
+}
+
+void MotorController::printDriverState(uint32_t status)
+{
+    Serial.println(F("\nDriver State:"));
+    Serial.print(F("  Standstill: "));
+    Serial.println((status & 0x00000400) ? F("Yes") : F("No"));
+    Serial.print(F("  Velocity Reached: "));
+    Serial.println((status & 0x00000800) ? F("Yes") : F("No"));
+    Serial.print(F("  Position Reached: "));
+    Serial.println((status & 0x00001000) ? F("Yes") : F("No"));
 }
