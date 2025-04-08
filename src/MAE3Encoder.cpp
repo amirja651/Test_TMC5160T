@@ -1,7 +1,7 @@
 #include "MAE3Encoder.h"
 
 // Initialize static member
-MAE3Encoder* MAE3Encoder::instance = nullptr;
+MotionSystem::MAE3Encoder* MotionSystem::MAE3Encoder::instance = nullptr;
 
 // Floating-point map function
 float mapf(float x, float in_min, float in_max, float out_min, float out_max)
@@ -9,7 +9,7 @@ float mapf(float x, float in_min, float in_max, float out_min, float out_max)
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-MAE3Encoder::MAE3Encoder(uint8_t signalPin)
+MotionSystem::MAE3Encoder::MAE3Encoder(uint8_t signalPin)
     : signalPin(signalPin),
       lastPulseWidth(0),
       lastPosition(0.0f),
@@ -22,7 +22,7 @@ MAE3Encoder::MAE3Encoder(uint8_t signalPin)
     instance = this;
 }
 
-void MAE3Encoder::begin()
+void MotionSystem::MAE3Encoder::begin()
 {
     pinMode(signalPin, INPUT);
 
@@ -33,7 +33,7 @@ void MAE3Encoder::begin()
 }
 
 // Static interrupt handler - keep it minimal
-void MAE3Encoder::handleInterrupt()
+void MotionSystem::MAE3Encoder::handleInterrupt()
 {
     if (instance)
     {
@@ -58,7 +58,7 @@ void MAE3Encoder::handleInterrupt()
     }
 }
 
-bool MAE3Encoder::update()
+bool MotionSystem::MAE3Encoder::update()
 {
     if (!newPulseAvailable)
     {
@@ -101,12 +101,12 @@ bool MAE3Encoder::update()
     return false;
 }
 
-float MAE3Encoder::getPositionDegrees() const
+float MotionSystem::MAE3Encoder::getPositionDegrees() const
 {
     return lastPosition;
 }
 
-uint32_t MAE3Encoder::getPulseWidth() const
+uint32_t MotionSystem::MAE3Encoder::getPulseWidth() const
 {
     return lastPulseWidth;
 }

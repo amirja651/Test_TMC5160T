@@ -4,7 +4,7 @@
 #include "MotorController.h"
 
 // Array of motor controller instances
-extern MotorController motors[Config::TMC5160T_Driver::NUM_MOTORS];
+extern MotionSystem::MotorController motors[MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS];
 
 // Function to initialize motor instances
 void initializeMotors();

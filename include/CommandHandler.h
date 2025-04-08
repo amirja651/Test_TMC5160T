@@ -4,82 +4,85 @@
 #include "Config.h"
 #include "MotorInstances.h"
 
-// Command type definitions
-enum class CommandType
+namespace MotionSystem
 {
-    MOTOR_FORWARD,
-    MOTOR_REVERSE,
-    MOTOR_STOP,
-    DRIVER_SPI_TEST,
-    DRIVER_STATUS,
-    DRIVER_CONFIG,
-    TEMPERATURE,
-    MODE_TOGGLE,
-    DRIVER_RESET,
-    HELP,
-    INVALID
-};
+    // Command type definitions
+    enum class CommandType
+    {
+        MOTOR_FORWARD,
+        MOTOR_REVERSE,
+        MOTOR_STOP,
+        DRIVER_SPI_TEST,
+        DRIVER_STATUS,
+        DRIVER_CONFIG,
+        TEMPERATURE,
+        MODE_TOGGLE,
+        DRIVER_RESET,
+        HELP,
+        INVALID
+    };
 
-// Command structure
-struct Command
-{
-    const char* name;
-    const char* description;
-    CommandType type;
-    char        key;
-    bool        requiresMotorNumber;
-};
-
-/**
- * @brief Command Handler class for processing user input commands
- *
- * This class implements a singleton pattern to handle user commands
- * for controlling the TMC5160T motor driver. It processes single-character
- * commands and executes corresponding motor control operations.
- */
-class CommandHandler
-{
-public:
-    /**
-     * @brief Get the singleton instance of CommandHandler
-     * @return Reference to the CommandHandler instance
-     */
-    static CommandHandler& getInstance();
+    // Command structure
+    struct Command
+    {
+        const char* name;
+        const char* description;
+        CommandType type;
+        char        key;
+        bool        requiresMotorNumber;
+    };
 
     /**
-     * @brief Process a single character command
-     * @param cmd The command character to process
+     * @brief Command Handler class for processing user input commands
+     *
+     * This class implements a singleton pattern to handle user commands
+     * for controlling the TMC5160T motor driver. It processes single-character
+     * commands and executes corresponding motor control operations.
      */
-    void processCommand(char cmd, int motorNum = -1);
+    class CommandHandler
+    {
+    public:
+        /**
+         * @brief Get the singleton instance of CommandHandler
+         * @return Reference to the CommandHandler instance
+         */
+        static CommandHandler& getInstance();
 
-    /**
-     * @brief Print the current driver status register value
-     */
-    void printStatus();
+        /**
+         * @brief Process a single character command
+         * @param cmd The command character to process
+         */
+        void processCommand(char cmd, int motorNum = -1);
 
-    /**
-     * @brief Print the command guide with all available commands
-     */
-    void printCommandGuide();
+        /**
+         * @brief Print the current driver status register value
+         */
+        void printStatus();
 
-    // Helper functions
-    const Command* findCommand(const char* input) const;
-    bool           validateMotorNumber(int motorNum) const;
-    void           executeMotorCommand(int motorNum, CommandType type);
+        /**
+         * @brief Print the command guide with all available commands
+         */
+        void printCommandGuide();
 
-    // New helper function for command validation
-    bool isValidMotorCommand(char cmd) const;
+        // Helper functions
+        const Command* findCommand(const char* input) const;
+        bool           validateMotorNumber(int motorNum) const;
+        void           executeMotorCommand(int motorNum, CommandType type);
 
-private:
-    CommandHandler();
-    CommandHandler(const CommandHandler&)            = delete;
-    CommandHandler& operator=(const CommandHandler&) = delete;
+        // New helper function for command validation
+        bool isValidMotorCommand(char cmd) const;
 
-    static CommandHandler* instance;
+    private:
+        CommandHandler();
+        CommandHandler(const CommandHandler&)            = delete;
+        CommandHandler& operator=(const CommandHandler&) = delete;
 
-    // Command definitions array
-    static const Command commands[];
-    static const size_t  NUM_COMMANDS;
-};
+        static CommandHandler* instance;
+
+        // Command definitions array
+        static const Command commands[];
+        static const size_t  NUM_COMMANDS;
+    };
+}  // namespace MotionSystem
 
 #endif

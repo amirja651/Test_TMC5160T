@@ -83,7 +83,7 @@ namespace MotionSystem
 
     Types::EncoderPosition ESP32Encoder::micronsToEncCounts(Types::MicronPosition microns)
     {
-        return static_cast<Types::EncoderPosition>(microns * Config::System::ENCODER_COUNTS_PER_MICRON);
+        return static_cast<Types::EncoderPosition>(microns * MotionSystem::Config::System::ENCODER_COUNTS_PER_MICRON);
     }
 
     Types::PixelPosition ESP32Encoder::countsToPixels(Types::EncoderPosition counts)

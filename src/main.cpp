@@ -23,6 +23,7 @@
 #include "Types.h"
 
 // Create instances of system components
+MotionSystem::MAE3Encoder      encoder2(35);
 MotionSystem::ESP32Encoder     encoder;
 MotionSystem::StepperMotor     motor;
 MotionSystem::LimitSwitch      limitSwitch;
@@ -40,9 +41,6 @@ TaskHandle_t motorUpdateTaskHandle3 = NULL;
 
 // Queue for serial commands
 QueueHandle_t commandQueue;
-
-// Create encoder instance on pin 36
-MAE3Encoder encoder2(35);
 
 // Command buffer size
 #define COMMAND_BUFFER_SIZE 32
@@ -68,7 +66,7 @@ void serialTask(void* pvParameters)
                     // Check for help command
                     if (strcmp(inputBuffer, "h") == 0 || strcmp(inputBuffer, "?") == 0)
                     {
-                        CommandHandler::getInstance().printCommandGuide();
+                        MotionSystem::CommandHandler::getInstance().printCommandGuide();
                         bufferIndex = 0;
                         continue;
                     }
@@ -86,16 +84,16 @@ void serialTask(void* pvParameters)
                         int  motorNum = inputBuffer[2] - '0';
                         char cmd      = inputBuffer[4];
 
-                        if (motorNum < 1 || motorNum > Config::TMC5160T_Driver::NUM_MOTORS)
+                        if (motorNum < 1 || motorNum > MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS)
                         {
                             Serial.print(F("❌ Invalid motor number (1-"));
-                            Serial.print(Config::TMC5160T_Driver::NUM_MOTORS);
+                            Serial.print(MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS);
                             Serial.println(F(")"));
                             bufferIndex = 0;
                             continue;
                         }
 
-                        if (!CommandHandler::getInstance().isValidMotorCommand(cmd))
+                        if (!MotionSystem::CommandHandler::getInstance().isValidMotorCommand(cmd))
                         {
                             Serial.println(F("❌ Invalid command. Use h/? for help"));
                             bufferIndex = 0;
@@ -140,7 +138,7 @@ void commandTask(void* pvParameters)
                 int  motorNum = inputBuffer[2] - '0';
                 char cmd      = inputBuffer[4];
 
-                CommandHandler::getInstance().processCommand(cmd, motorNum);
+                MotionSystem::CommandHandler::getInstance().processCommand(cmd, motorNum);
             }
             else
             {
@@ -214,8 +212,8 @@ void motorUpdateTask3(void* pvParameters)
 void setup()
 {
     // Initialize serial communication
-    Serial.begin(Config::System::SERIAL_BAUD_RATE);
-    delay(Config::System::STARTUP_DELAY_MS);
+    Serial.begin(MotionSystem::Config::System::SERIAL_BAUD_RATE);
+    delay(MotionSystem::Config::System::STARTUP_DELAY_MS);
     while (!Serial)
     {
         delay(10);
@@ -240,7 +238,7 @@ void setup()
     // Initialize all motor controllers
     initializeMotors();
 
-    CommandHandler::getInstance().printCommandGuide();
+    MotionSystem::CommandHandler::getInstance().printCommandGuide();
 
     // Create tasks with increased stack sizes
     xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);

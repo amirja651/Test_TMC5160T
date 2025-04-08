@@ -1,28 +1,33 @@
 #include "CommandHandler.h"
 
 // Initialize static members
-CommandHandler* CommandHandler::instance = nullptr;
+MotionSystem::CommandHandler* MotionSystem::CommandHandler::instance = nullptr;
 
 // Command definitions
-const Command CommandHandler::commands[] = {
-    {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, Config::CommandHandler::CMD_FORWARD, true},
-    {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, Config::CommandHandler::CMD_REVERSE, true},
-    {"Stop", "Stop motor", CommandType::MOTOR_STOP, Config::CommandHandler::CMD_STOP, true},
+const MotionSystem::Command MotionSystem::CommandHandler::commands[] = {
+    {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, MotionSystem::Config::CommandHandler::CMD_FORWARD,
+     true},
+    {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, MotionSystem::Config::CommandHandler::CMD_REVERSE,
+     true},
+    {"Stop", "Stop motor", CommandType::MOTOR_STOP, MotionSystem::Config::CommandHandler::CMD_STOP, true},
 
-    {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST, Config::CommandHandler::CMD_TEST_SPI, true},
+    {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST,
+     MotionSystem::Config::CommandHandler::CMD_TEST_SPI, true},
 
-    {"Info", "Show system information", CommandType::DRIVER_STATUS, Config::CommandHandler::CMD_SHOW_STATUS, true},
-    {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG, Config::CommandHandler::CMD_SHOW_CONFIG, true},
+    {"Info", "Show system information", CommandType::DRIVER_STATUS,
+     MotionSystem::Config::CommandHandler::CMD_SHOW_STATUS, true},
+    {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG,
+     MotionSystem::Config::CommandHandler::CMD_SHOW_CONFIG, true},
 
-    {"Temp", "Show temperature", CommandType::TEMPERATURE, Config::CommandHandler::CMD_SHOW_TEMP, true},
-    {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, Config::CommandHandler::CMD_TOGGLE_MODE, true},
+    {"Temp", "Show temperature", CommandType::TEMPERATURE, MotionSystem::Config::CommandHandler::CMD_SHOW_TEMP, true},
+    {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, MotionSystem::Config::CommandHandler::CMD_TOGGLE_MODE, true},
 
-    {"Reset", "Reset driver", CommandType::DRIVER_RESET, Config::CommandHandler::CMD_RESET, true},
+    {"Reset", "Reset driver", CommandType::DRIVER_RESET, MotionSystem::Config::CommandHandler::CMD_RESET, true},
 
-    {"Help", "Show command guide", CommandType::HELP, Config::CommandHandler::CMD_HELP, false},
-    {"?", "Show command guide", CommandType::HELP, Config::CommandHandler::CMD_HELP_ALT, false}};
+    {"Help", "Show command guide", CommandType::HELP, MotionSystem::Config::CommandHandler::CMD_HELP, false},
+    {"?", "Show command guide", CommandType::HELP, MotionSystem::Config::CommandHandler::CMD_HELP_ALT, false}};
 
-const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
+const size_t MotionSystem::CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
 
 /**
  * @brief Get the singleton instance of CommandHandler
@@ -31,7 +36,7 @@ const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0
  * This method implements the singleton pattern, ensuring only one
  * instance of CommandHandler exists throughout the program's lifetime.
  */
-CommandHandler& CommandHandler::getInstance()
+MotionSystem::CommandHandler& MotionSystem::CommandHandler::getInstance()
 {
     if (!instance)
     {
@@ -47,7 +52,7 @@ CommandHandler& CommandHandler::getInstance()
  * No initialization is needed as this is handled by the
  * MotorController and SPIManager classes.
  */
-CommandHandler::CommandHandler() {}
+MotionSystem::CommandHandler::CommandHandler() {}
 
 /**
  * @brief Print the command guide with all available commands
@@ -56,7 +61,7 @@ CommandHandler::CommandHandler() {}
  * descriptions. This is shown when the help command is received
  * or when an invalid command is entered.
  */
-void CommandHandler::printCommandGuide()
+void MotionSystem::CommandHandler::printCommandGuide()
 {
     Serial.println("\n ==================== Available Commands ====================");
     Serial.println("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
@@ -84,7 +89,7 @@ void CommandHandler::printCommandGuide()
     Serial.println("\n ==================== End of Command Guide ====================\n> ");
 }
 
-const Command* CommandHandler::findCommand(const char* input) const
+const MotionSystem::Command* MotionSystem::CommandHandler::findCommand(const char* input) const
 {
     for (size_t i = 0; i < NUM_COMMANDS; i++)
     {
@@ -96,12 +101,12 @@ const Command* CommandHandler::findCommand(const char* input) const
     return nullptr;
 }
 
-bool CommandHandler::validateMotorNumber(int motorNum) const
+bool MotionSystem::CommandHandler::validateMotorNumber(int motorNum) const
 {
     return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
 }
 
-void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
+void MotionSystem::CommandHandler::executeMotorCommand(int motorNum, CommandType type)
 {
     if (motors[motorNum - 1].testCommunication(false))
     {
@@ -185,7 +190,7 @@ void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
     }
 }
 
-bool CommandHandler::isValidMotorCommand(char cmd) const
+bool MotionSystem::CommandHandler::isValidMotorCommand(char cmd) const
 {
     for (size_t i = 0; i < NUM_COMMANDS; i++)
     {
@@ -204,7 +209,7 @@ bool CommandHandler::isValidMotorCommand(char cmd) const
  * This method handles all user input commands by mapping them to
  * appropriate motor control operations.
  */
-void CommandHandler::processCommand(char cmd, int motorNum)
+void MotionSystem::CommandHandler::processCommand(char cmd, int motorNum)
 {
     const Command* command = findCommand(&cmd);
 
