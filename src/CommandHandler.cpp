@@ -108,63 +108,63 @@ void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
         switch (type)
         {
             case CommandType::MOTOR_FORWARD:
-                Serial.print("Motor ");
+                Serial.print(F("Motor "));
                 Serial.print(motorNum);
-                Serial.println(" moving forward");
+                Serial.println(F(" moving forward"));
                 motors[motorNum - 1].moveForward();
                 break;
             case CommandType::MOTOR_REVERSE:
-                Serial.print("Motor ");
+                Serial.print(F("Motor "));
                 Serial.print(motorNum);
-                Serial.println(" moving reverse");
+                Serial.println(F(" moving reverse"));
                 motors[motorNum - 1].moveReverse();
                 break;
             case CommandType::MOTOR_STOP:
-                Serial.print("Motor ");
+                Serial.print(F("Motor "));
                 Serial.print(motorNum);
-                Serial.println(" stopped");
+                Serial.println(F(" stopped"));
                 motors[motorNum - 1].stop();
                 break;
 
             case CommandType::DRIVER_RESET:
-                Serial.print("Resetting driver for Motor ");
+                Serial.print(F("Resetting driver for Motor "));
                 Serial.print(motorNum);
-                Serial.println(": ");
+                Serial.println(F(": "));
                 motors[motorNum - 1].resetDriverState();
                 break;
 
             case CommandType::DRIVER_SPI_TEST:
-                Serial.print("\nMotor ");
+                Serial.print(F("\nMotor "));
                 Serial.print(motorNum);
-                Serial.print(" - ");
+                Serial.print(F(" - "));
                 motors[motorNum - 1].testCommunication();
                 break;
 
             case CommandType::DRIVER_STATUS:
-                Serial.print("\nDriver Status for Motor ");
+                Serial.print(F("\nDriver Status for Motor "));
                 Serial.print(motorNum);
-                Serial.println(": ");
+                Serial.println(F(": "));
                 motors[motorNum - 1].printDriverStatus();
                 break;
 
             case CommandType::DRIVER_CONFIG:
-                Serial.print("\nDriver Configuration for Motor ");
+                Serial.print(F("\nDriver Configuration for Motor "));
                 Serial.print(motorNum);
-                Serial.println(": ");
+                Serial.println(F(": "));
                 motors[motorNum - 1].printDriverConfig();
                 break;
 
             case CommandType::TEMPERATURE:
-                Serial.print("\nTemperature for Motor ");
+                Serial.print(F("\nTemperature for Motor "));
                 Serial.print(motorNum);
-                Serial.print(": ");
+                Serial.print(F(": "));
                 motors[motorNum - 1].printTemperature();
                 break;
 
             case CommandType::MODE_TOGGLE:
-                Serial.print("\nToggling mode for Motor ");
+                Serial.print(F("\nToggling mode for Motor "));
                 Serial.print(motorNum);
-                Serial.println(": ");
+                Serial.println(F(": "));
                 motors[motorNum - 1].toggleStealthChop();
                 break;
 
@@ -173,15 +173,15 @@ void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
                 break;
 
             default:
-                Serial.println("Invalid command type ❌ ");
+                Serial.println(F("Invalid command type ❌ "));
                 break;
         }
     }
     else
     {
-        Serial.print("\nMotor ");
+        Serial.print(F("\nMotor "));
         Serial.print(motorNum);
-        Serial.println(" communication failed ❌ ");
+        Serial.println(F(" communication failed ❌ "));
     }
 }
 
@@ -210,7 +210,7 @@ void CommandHandler::processCommand(char cmd, int motorNum)
 
     if (!command)
     {
-        Serial.println("Invalid command ❌");
+        Serial.println(F("Invalid command ❌"));
         return;
     }
 
@@ -218,9 +218,9 @@ void CommandHandler::processCommand(char cmd, int motorNum)
     {
         if (!validateMotorNumber(motorNum))
         {
-            Serial.print("Invalid motor number (1-");
+            Serial.print(F("Invalid motor number (1-"));
             Serial.print(Config::TMC5160T_Driver::NUM_MOTORS);
-            Serial.println(") ❌");
+            Serial.println(F(") ❌"));
             return;
         }
         executeMotorCommand(motorNum, command->type);
@@ -230,8 +230,8 @@ void CommandHandler::processCommand(char cmd, int motorNum)
         // Handle system commands here
         if (command->type == CommandType::DRIVER_STATUS)
         {
-            Serial.println("System Information:");
-            Serial.print("Number of motors: ");
+            Serial.println(F("System Information:"));
+            Serial.print(F("Number of motors: "));
             Serial.println(Config::TMC5160T_Driver::NUM_MOTORS);
             // Add more system info as needed
         }

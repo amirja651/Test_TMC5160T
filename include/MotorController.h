@@ -132,27 +132,11 @@ public:
      */
     void dirLow();
 
-    /**
-     * @brief Print the name of this motor controller instance
-     */
-    void printInstanceName() const;
-
-    /**
-     * @brief Optimize the motor controller for pancake motor
-     */
-    void optimizeForPancake();
-
     // Advanced motor control methods
     void setCoolStepThreshold(uint32_t threshold);  // Set CoolStep threshold
     void setStallGuardThreshold(int8_t threshold);  // Set StallGuard threshold
     void setStallGuardFilter(bool enable);          // Enable/disable StallGuard filter
     void setSpreadCycle(bool enable);               // Enable/disable SpreadCycle mode
-    void setMicrostepInterpolation(bool enable);    // Enable/disable microstep interpolation
-
-    // Advanced current control
-    void setCurrentScaling(uint8_t scaling);  // Set current scaling factor
-    void setCurrentHoldDelay(uint8_t delay);  // Set current hold delay
-    void setCurrentRunDelay(uint8_t delay);   // Set current run delay
 
     // Motion control
     void setRampMode(uint8_t mode);           // Set ramp mode (0: Positioning, 1: Velocity)
@@ -160,15 +144,9 @@ public:
     void setMaxAcceleration(uint32_t accel);  // Set maximum acceleration
     void setMaxDeceleration(uint32_t decel);  // Set maximum deceleration
 
-    // Advanced diagnostics
-    void     enableDiagnostics();   // Enable advanced diagnostics
-    void     disableDiagnostics();  // Disable advanced diagnostics
-    uint32_t getStallGuardValue();  // Get current StallGuard value
-    uint32_t getLoadValue();        // Get current load value
-    bool     isStalled();           // Check if motor is stalled
-
 private:
     // Internal configuration methods
+    void configureDriver2();                  // Configure driver parameters
     void configureDriver();                   // Configure driver parameters
     void setupPins();                         // Setup GPIO pins
     void step();                              // Execute single step
@@ -176,6 +154,19 @@ private:
     void handlePowerLoss();                   // Handle power loss situation
     void checkStall();                        // Check for motor stall condition
     void setMovementDirection(bool forward);  // Set movement direction and update state
+
+    // Status printing helper methods
+    void printStatusRegister(uint32_t status);    // Print driver status register
+    void printErrorFlags(uint32_t status);        // Print error flags
+    void printStallGuardStatus(uint32_t status);  // Print stall guard status
+    void printDriverState(uint32_t status);       // Print driver state
+
+    // Advanced diagnostics
+    void updateDiagnostics();    // Update diagnostic information
+    void handleStall();          // Handle stall condition
+    void optimizeCurrent();      // Optimize current based on load
+    void checkLoad();            // Check motor load
+    void adjustMicrostepping();  // Adjust microstepping based on speed
 
     // Driver instance and state variables
     TMC5160Stepper driver;        // TMC5160 driver instance
@@ -202,12 +193,6 @@ private:
     uint16_t speed;         // Current speed in steps per second
     uint16_t acceleration;  // Current acceleration in steps per second squared
 
-    // Status printing helper methods
-    void printStatusRegister(uint32_t status);    // Print driver status register
-    void printErrorFlags(uint32_t status);        // Print error flags
-    void printStallGuardStatus(uint32_t status);  // Print stall guard status
-    void printDriverState(uint32_t status);       // Print driver state
-
     // Temperature monitoring variables
     unsigned long lastTempPrintTime;  // Last temperature print timestamp
     int           lastTemperature;    // Last recorded temperature
@@ -224,22 +209,13 @@ private:
     bool     microstepInterpolation;  // Microstep interpolation state
 
     // Advanced current control parameters
-    uint8_t currentScaling;    // Current scaling factor
     uint8_t currentHoldDelay;  // Current hold delay
-    uint8_t currentRunDelay;   // Current run delay
 
     // Motion control parameters
     uint8_t  rampMode;         // Current ramp mode
     uint32_t maxSpeed;         // Maximum speed
     uint32_t maxAcceleration;  // Maximum acceleration
     uint32_t maxDeceleration;  // Maximum deceleration
-
-    // Advanced diagnostics
-    void updateDiagnostics();    // Update diagnostic information
-    void handleStall();          // Handle stall condition
-    void optimizeCurrent();      // Optimize current based on load
-    void checkLoad();            // Check motor load
-    void adjustMicrostepping();  // Adjust microstepping based on speed
 };
 
 #endif
