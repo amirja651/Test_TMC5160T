@@ -1,16 +1,18 @@
-#ifndef ESP32_ENCODER_H
-#define ESP32_ENCODER_H
+#ifndef DIFFERENTIAL_ENCODER_H
+#define DIFFERENTIAL_ENCODER_H
 
 #include <driver/pcnt.h>
-#include "Config.h"
+#include "EncoderConfig.h"
 #include "EncoderInterface.h"
+#include "EncoderInterruptManager.h"
+#include "Types.h"
 
 namespace MotionSystem
 {
     class DifferentialEncoder : public EncoderInterface
     {
     public:
-        DifferentialEncoder();
+        DifferentialEncoder(const EncoderConfig& config);
         ~DifferentialEncoder() override;
         void                   begin() override;
         void                   resetPosition() override;
@@ -21,9 +23,13 @@ namespace MotionSystem
         static void IRAM_ATTR  encoderOverflowISR(void* arg);
 
     private:
+        void setupPCNT();
+
+        EncoderConfig                   config;
         pcnt_unit_t                     encoderPcntUnit;
         volatile Types::EncoderPosition position;
+        volatile int32_t                overflowCount;
     };
 }  // namespace MotionSystem
 
-#endif  // ESP32_ENCODER_H
+#endif  // DIFFERENTIAL_ENCODER_H

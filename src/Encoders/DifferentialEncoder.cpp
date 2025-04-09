@@ -1,16 +1,19 @@
-#include "Encoders\DifferentialEncoder.h"
+#include "Encoders/DifferentialEncoder.h"
+#include "Encoders/EncoderInterruptManager.h"
 
 namespace MotionSystem
 {
     static DifferentialEncoder* encoderInstance = nullptr;
-    DifferentialEncoder::DifferentialEncoder() : encoderPcntUnit(PCNT_UNIT_0), position(0)
+    DifferentialEncoder::DifferentialEncoder(const EncoderConfig& config)
+        : config(config), encoderPcntUnit(static_cast<pcnt_unit_t>(config.pcntUnit)), position(0), overflowCount(0)
     {
         encoderInstance = this;
     }
 
     DifferentialEncoder::~DifferentialEncoder()
     {
-        pcnt_isr_handler_remove(encoderPcntUnit);
+        pcnt_counter_pause(encoderPcntUnit);
+        pcnt_counter_clear(encoderPcntUnit);
         if (encoderInstance == this)
         {
             encoderInstance = nullptr;
@@ -19,82 +22,110 @@ namespace MotionSystem
 
     void DifferentialEncoder::begin()
     {
-        pcnt_config_t pcntConfig = {
-            .pulse_gpio_num = Config::Pins::ENCODER_A_PIN,  // Channel A
-            .ctrl_gpio_num  = Config::Pins::ENCODER_B_PIN,  // Channel B
-            .lctrl_mode     = PCNT_MODE_REVERSE,            // Reverse counting when B=1
-            .hctrl_mode     = PCNT_MODE_KEEP,               // Keep counting when B=0
-            .pos_mode       = PCNT_COUNT_INC,               // Count up on rising edge A
-            .neg_mode       = PCNT_COUNT_DEC,               // Count down on falling edge A
-            .counter_h_lim  = 32767,                        // Max hardware limit
-            .counter_l_lim  = -32768,                       // Min hardware limit
-            .unit           = encoderPcntUnit,
-            .channel        = PCNT_CHANNEL_0,
-        };
-        pcnt_unit_config(&pcntConfig);
-        pcnt_event_enable(encoderPcntUnit, PCNT_EVT_H_LIM);
-        pcnt_event_enable(encoderPcntUnit, PCNT_EVT_L_LIM);
-        pcnt_set_filter_value(encoderPcntUnit, 100);
-        pcnt_filter_enable(encoderPcntUnit);
-        pcnt_counter_pause(encoderPcntUnit);
-        pcnt_counter_clear(encoderPcntUnit);
-        pcnt_counter_resume(encoderPcntUnit);
-        pcnt_isr_service_install(0);
-        pcnt_isr_handler_add(encoderPcntUnit, DifferentialEncoder::encoderOverflowISR, nullptr);
-        Serial.print(F("ESP32 encoder initialized on pins A:"));
-        Serial.print(String(Config::Pins::ENCODER_A_PIN));
-        Serial.print(F(" B:"));
-        Serial.println(String(Config::Pins::ENCODER_B_PIN));
-    }
-
-    Types::EncoderPosition DifferentialEncoder::readPosition()
-    {
-        int16_t count = 0;
-        pcnt_get_counter_value(encoderPcntUnit, &count);
-        return position + count;
+        setupPCNT();
+        resetPosition();
     }
 
     void DifferentialEncoder::resetPosition()
     {
-        position = 0;
+        position      = 0;
+        overflowCount = 0;
         pcnt_counter_clear(encoderPcntUnit);
+    }
+
+    Types::EncoderPosition DifferentialEncoder::readPosition()
+    {
+        int16_t count;
+        pcnt_get_counter_value(encoderPcntUnit, &count);
+
+        // Handle overflow/underflow
+        if (count >= 32767)
+        {
+            overflowCount++;
+            pcnt_counter_clear(encoderPcntUnit);
+        }
+        else if (count <= -32768)
+        {
+            overflowCount--;
+            pcnt_counter_clear(encoderPcntUnit);
+        }
+
+        position =
+            static_cast<Types::EncoderPosition>(count) + (static_cast<Types::EncoderPosition>(overflowCount) * 65536);
+
+        if (config.invertDirection)
+        {
+            position = -position;
+        }
+
+        return position;
     }
 
     Types::MicronPosition DifferentialEncoder::countsToMicrons(Types::EncoderPosition counts)
     {
-        return static_cast<Types::MicronPosition>(counts) / Config::System::ENCODER_COUNTS_PER_MICRON;
+        return static_cast<Types::MicronPosition>(counts) * config.micronsPerCount;
     }
 
     Types::EncoderPosition DifferentialEncoder::micronsToEncCounts(Types::MicronPosition microns)
     {
-        return static_cast<Types::EncoderPosition>(microns * MotionSystem::Config::System::ENCODER_COUNTS_PER_MICRON);
+        return static_cast<Types::EncoderPosition>(microns / config.micronsPerCount);
     }
 
     Types::PixelPosition DifferentialEncoder::countsToPixels(Types::EncoderPosition counts)
     {
-        return countsToMicrons(counts) / Config::System::PIXEL_SIZE;
+        return static_cast<Types::PixelPosition>(countsToMicrons(counts) / 5.2f);  // 5.2μm per pixel
     }
 
     void IRAM_ATTR DifferentialEncoder::encoderOverflowISR(void* arg)
     {
-        if (!encoderInstance)
+        DifferentialEncoder* encoder = static_cast<DifferentialEncoder*>(arg);
+        if (encoder)
         {
-            return;
-        }
-
-        uint32_t status = 0;
-        pcnt_get_event_status(encoderInstance->encoderPcntUnit, &status);
-        if (status & PCNT_EVT_H_LIM)
-        {
-            encoderInstance->position += 32767;
-            pcnt_counter_clear(encoderInstance->encoderPcntUnit);
-        }
-
-        else if (status & PCNT_EVT_L_LIM)
-        {
-            encoderInstance->position -= 32768;
-            pcnt_counter_clear(encoderInstance->encoderPcntUnit);
+            if (pcnt_get_counter_value(encoder->encoderPcntUnit, nullptr) > 0)
+            {
+                encoder->overflowCount++;
+            }
+            else
+            {
+                encoder->overflowCount--;
+            }
+            pcnt_counter_clear(encoder->encoderPcntUnit);
         }
     }
 
+    void DifferentialEncoder::setupPCNT()
+    {
+        pcnt_config_t pcnt_config = {
+            .pulse_gpio_num = config.pinA,
+            .ctrl_gpio_num  = config.pinB,
+            .lctrl_mode     = PCNT_MODE_REVERSE,
+            .hctrl_mode     = PCNT_MODE_KEEP,
+            .pos_mode       = PCNT_COUNT_INC,
+            .neg_mode       = PCNT_COUNT_DEC,
+            .counter_h_lim  = 32767,
+            .counter_l_lim  = -32768,
+            .unit           = encoderPcntUnit,
+            .channel        = PCNT_CHANNEL_0,
+        };
+
+        pcnt_unit_config(&pcnt_config);
+
+        // Configure filter
+        pcnt_set_filter_value(encoderPcntUnit, 100);
+        pcnt_filter_enable(encoderPcntUnit);
+
+        // Enable events on zero, maximum and minimum limit values
+        pcnt_event_enable(encoderPcntUnit, PCNT_EVT_ZERO);
+        pcnt_event_enable(encoderPcntUnit, PCNT_EVT_H_LIM);
+        pcnt_event_enable(encoderPcntUnit, PCNT_EVT_L_LIM);
+
+        // Register ISR handler
+        pcnt_isr_register(encoderOverflowISR, this, 0, nullptr);
+
+        // Enable interrupts
+        pcnt_intr_enable(encoderPcntUnit);
+
+        // Start counting
+        pcnt_counter_resume(encoderPcntUnit);
+    }
 }  // namespace MotionSystem

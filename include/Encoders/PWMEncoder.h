@@ -1,34 +1,42 @@
-#ifndef MAE3_ENCODER_H
-#define MAE3_ENCODER_H
+#ifndef PWM_ENCODER_H
+#define PWM_ENCODER_H
 
-#include <Arduino.h>
+#include "EncoderConfig.h"
+#include "EncoderInterface.h"
+#include "EncoderInterruptManager.h"
+#include "Types.h"
 
 namespace MotionSystem
 {
-    class PWMEncoder
+    class PWMEncoder : public EncoderInterface
     {
     public:
-        PWMEncoder(uint8_t signalPin);
-        void     begin();
-        bool     update();
-        float    getPositionDegrees() const;
-        uint32_t getPulseWidth() const;
+        PWMEncoder(const EncoderConfig& config);
+        ~PWMEncoder() override;
+
+        void                   begin() override;
+        void                   resetPosition() override;
+        Types::EncoderPosition readPosition() override;
+        Types::MicronPosition  countsToMicrons(Types::EncoderPosition counts) override;
+        Types::EncoderPosition micronsToEncCounts(Types::MicronPosition microns) override;
+        Types::PixelPosition   countsToPixels(Types::EncoderPosition counts) override;
 
     private:
-        static void               handleInterrupt();
-        void                      measurePulse();
-        const uint8_t             signalPin;
-        uint32_t                  lastPulseWidth;
-        float                     lastPosition;
-        unsigned long             lastUpdateTime;
-        static PWMEncoder*        instance;
-        volatile unsigned long    pulseStartTime;
-        volatile unsigned long    currentPulseWidth;
-        volatile bool             newPulseAvailable;
-        static constexpr uint32_t MIN_PULSE_WIDTH    = 5;
-        static constexpr uint32_t MAX_PULSE_WIDTH    = 3935;
-        static constexpr float    POSITION_THRESHOLD = 0.5f;
+        static void IRAM_ATTR handleInterrupt(void* arg);
+        void                  measurePulse();
+
+        EncoderConfig                   config;
+        volatile Types::EncoderPosition position;
+        volatile int32_t                overflowCount;
+        volatile unsigned long          pulseStartTime;
+        volatile unsigned long          currentPulseWidth;
+        volatile bool                   newPulseAvailable;
+        unsigned long                   lastUpdateTime;
+
+        static constexpr uint32_t MIN_PULSE_WIDTH   = 5;
+        static constexpr uint32_t MAX_PULSE_WIDTH   = 3935;
+        static constexpr float    DEGREES_PER_PULSE = 360.0f / 4096.0f;  // 12-bit resolution
     };
 }  // namespace MotionSystem
 
-#endif  // MAE3_ENCODER_H
+#endif  // PWM_ENCODER_H

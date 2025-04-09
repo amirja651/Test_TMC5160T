@@ -89,6 +89,7 @@ namespace MotionSystem
             constexpr uint8_t ENABLE_PIN        = 14;
             constexpr uint8_t ENCODER_A_PIN     = 22;
             constexpr uint8_t ENCODER_B_PIN     = 23;
+            constexpr uint8_t ENCODER_P_PIN     = 35;
             constexpr uint8_t ENCODER_INDEX_PIN = 21;
             constexpr uint8_t LIMIT_SWITCH_PIN  = 13;
         }  // namespace Pins

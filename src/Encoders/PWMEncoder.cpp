@@ -1,94 +1,97 @@
-#include "Encoders\PWMEncoder.h"
+#include "Encoders/PWMEncoder.h"
+#include "Encoders/EncoderInterruptManager.h"
 
-MotionSystem::PWMEncoder* MotionSystem::PWMEncoder::instance = nullptr;
-
-float mapf(float x, float in_min, float in_max, float out_min, float out_max)
+namespace MotionSystem
 {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-MotionSystem::PWMEncoder::PWMEncoder(uint8_t signalPin)
-    : signalPin(signalPin),
-      lastPulseWidth(0),
-      lastPosition(0.0f),
-      lastUpdateTime(0),
-      pulseStartTime(0),
-      currentPulseWidth(0),
-      newPulseAvailable(false)
-{
-    instance = this;
-}
-
-void MotionSystem::PWMEncoder::begin()
-{
-    pinMode(signalPin, INPUT);
-    attachInterrupt(digitalPinToInterrupt(signalPin), handleInterrupt, CHANGE);
-    lastUpdateTime = millis();
-}
-
-void MotionSystem::PWMEncoder::handleInterrupt()
-{
-    if (instance)
+    PWMEncoder::PWMEncoder(const EncoderConfig& config)
+        : config(config),
+          position(0),
+          pulseStartTime(0),
+          currentPulseWidth(0),
+          newPulseAvailable(false),
+          lastUpdateTime(0)
     {
-        if (digitalRead(instance->signalPin) == HIGH)
+    }
+
+    PWMEncoder::~PWMEncoder()
+    {
+        EncoderInterruptManager::getInstance().freeInterrupt(config.interruptPin);
+    }
+
+    void PWMEncoder::begin()
+    {
+        pinMode(config.signalPin, INPUT);
+
+        if (!EncoderInterruptManager::getInstance().allocateInterrupt(config.interruptPin, handleInterrupt, this))
         {
-            instance->pulseStartTime = micros();
+            // Handle error - interrupt allocation failed
+            return;
         }
 
+        resetPosition();
+    }
+
+    void PWMEncoder::resetPosition()
+    {
+        position      = 0;
+        overflowCount = 0;
+    }
+
+    Types::EncoderPosition PWMEncoder::readPosition()
+    {
+        if (newPulseAvailable)
+        {
+            measurePulse();
+        }
+        return position;
+    }
+
+    Types::MicronPosition PWMEncoder::countsToMicrons(Types::EncoderPosition counts)
+    {
+        return static_cast<Types::MicronPosition>(counts) * config.micronsPerCount;
+    }
+
+    Types::EncoderPosition PWMEncoder::micronsToEncCounts(Types::MicronPosition microns)
+    {
+        return static_cast<Types::EncoderPosition>(microns / config.micronsPerCount);
+    }
+
+    Types::PixelPosition PWMEncoder::countsToPixels(Types::EncoderPosition counts)
+    {
+        return static_cast<Types::PixelPosition>(countsToMicrons(counts) / 5.2f);  // 5.2μm per pixel
+    }
+
+    void IRAM_ATTR PWMEncoder::handleInterrupt(void* arg)
+    {
+        PWMEncoder*   encoder     = static_cast<PWMEncoder*>(arg);
+        unsigned long currentTime = micros();
+
+        if (digitalRead(encoder->config.signalPin) == HIGH)
+        {
+            encoder->pulseStartTime = currentTime;
+        }
         else
         {
-            unsigned long currentTime = micros();
-            if (instance->pulseStartTime != 0)
-            {
-                unsigned long pulseWidth = currentTime - instance->pulseStartTime;
-                if (pulseWidth > MIN_PULSE_WIDTH && pulseWidth < MAX_PULSE_WIDTH)
-                {
-                    instance->currentPulseWidth = pulseWidth;
-                    instance->newPulseAvailable = true;
-                }
-            }
+            encoder->currentPulseWidth = currentTime - encoder->pulseStartTime;
+            encoder->newPulseAvailable = true;
         }
     }
-}
 
-bool MotionSystem::PWMEncoder::update()
-{
-    if (!newPulseAvailable)
+    void PWMEncoder::measurePulse()
     {
-        return false;
+        if (currentPulseWidth >= MIN_PULSE_WIDTH && currentPulseWidth <= MAX_PULSE_WIDTH)
+        {
+            float degrees = (currentPulseWidth - MIN_PULSE_WIDTH) * (360.0f / (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH));
+
+            if (config.invertDirection)
+            {
+                degrees = 360.0f - degrees;
+            }
+
+            position = static_cast<Types::EncoderPosition>((degrees / 360.0f) * config.countsPerRevolution);
+        }
+
+        newPulseAvailable = false;
+        lastUpdateTime    = millis();
     }
-
-    noInterrupts();
-    uint32_t pulseWidth = currentPulseWidth;
-    newPulseAvailable   = false;
-    interrupts();
-    float newPosition = mapf(pulseWidth, 0, 3933, 0, 360);
-    if (newPosition < 0.0f)
-        newPosition = 0.0f;
-    if (newPosition > 360.0f)
-        newPosition = 360.0f;
-    float positionDiff = fabs(newPosition - lastPosition);
-    if (positionDiff > 180.0f)
-    {
-        positionDiff = 360.0f - positionDiff;
-    }
-
-    if (positionDiff >= POSITION_THRESHOLD)
-    {
-        lastPulseWidth = pulseWidth;
-        lastPosition   = newPosition;
-        return true;
-    }
-
-    return false;
-}
-
-float MotionSystem::PWMEncoder::getPositionDegrees() const
-{
-    return lastPosition;
-}
-
-uint32_t MotionSystem::PWMEncoder::getPulseWidth() const
-{
-    return lastPulseWidth;
-}
+}  // namespace MotionSystem
