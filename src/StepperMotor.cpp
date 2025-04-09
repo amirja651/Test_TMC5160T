@@ -2,19 +2,14 @@
 
 namespace MotionSystem
 {
-
     StepperMotor::StepperMotor() : currentStepPosition(0) {}
 
     void StepperMotor::init()
     {
-        // Configure motor control pins
         pinMode(Config::Pins::STEP_PIN, OUTPUT);
         pinMode(Config::Pins::DIR_PIN, OUTPUT);
         pinMode(Config::Pins::ENABLE_PIN, OUTPUT);
-
-        // Active LOW enable
         digitalWrite(Config::Pins::ENABLE_PIN, LOW);  // Enable the motor driver
-
         Serial.print(F("Stepper motor initialized on pins STEP:"));
         Serial.print(String(Config::Pins::STEP_PIN));
         Serial.print(F(" DIR:"));
@@ -25,7 +20,6 @@ namespace MotionSystem
 
     void StepperMotor::enable(bool enable)
     {
-        // Most drivers are active LOW for enable
         digitalWrite(Config::Pins::ENABLE_PIN, enable ? LOW : HIGH);
     }
 
@@ -37,7 +31,6 @@ namespace MotionSystem
 
     void IRAM_ATTR StepperMotor::generateStep()
     {
-        // Using standard digitalWrite for compatibility
         digitalWrite(Config::Pins::STEP_PIN, HIGH);
         delayMicroseconds(2);  // Minimum pulse width (check driver specs)
         digitalWrite(Config::Pins::STEP_PIN, LOW);
@@ -61,5 +54,3 @@ namespace MotionSystem
     }
 
 }  // namespace MotionSystem
-
-// End of code

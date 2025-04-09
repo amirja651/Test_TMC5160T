@@ -2,7 +2,6 @@
 
 namespace MotionSystem
 {
-
     StatusReporter::StatusReporter(EncoderInterface* encoder, PIDController* pidController, LimitSwitch* limitSwitch)
         : encoder(encoder),
           pidController(pidController),
@@ -14,8 +13,6 @@ namespace MotionSystem
     {
     }
 
-    // For task-creating classes (PIDController, MotionController, StatusReporter),
-    // add task deletion in destructors:
     StatusReporter::~StatusReporter()
     {
         if (taskHandle != nullptr)
@@ -27,37 +24,23 @@ namespace MotionSystem
 
     void StatusReporter::printStatusUpdate(bool showStatus)
     {
-        // Types::EncoderPosition currentPosition = encoder->readPosition();
-
-        // Calculate positions
         Types::MicronPosition relPosition = getRelativePosition();
         Types::MicronPosition absPosition = getAbsolutePosition();
         Types::MicronPosition relTarget =
             encoder->countsToMicrons(pidController->getTargetPosition() - relativeZeroPosition);
-
-        // Calculate error based on relative position
-        float error = relTarget - relPosition;
-
-        // Calculate motor frequency
-        float motorFrequency = abs(currentSpeed);  // Steps per second
-
-        // Calculate relative position as percentage of relative travel limit
+        float error            = relTarget - relPosition;
+        float motorFrequency   = abs(currentSpeed);  // Steps per second
         float relTravelPercent = (relPosition / Config::System::REL_TRAVEL_LIMIT_MICRONS) * 100;
-
         if (motorFrequency > 10 || showStatus)
         {
-            // Print status update
             Serial.printf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n", relPosition,
                           abs(relTravelPercent), Config::System::REL_TRAVEL_LIMIT_MM, relTarget, error);
-
             Serial.printf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
                           (absPosition / Config::System::TOTAL_TRAVEL_MICRONS) * 100, Config::System::TOTAL_TRAVEL_MM);
-
             Serial.printf("Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
                           (motorFrequency / (Config::System::STEPS_PER_REV * Config::System::MICROSTEPS)) *
                               Config::System::LEAD_SCREW_PITCH,
                           limitSwitch->isTriggered() ? "TRIGGERED" : "clear");
-
             Serial.println(F("-------------------------------"));
         }
     }
@@ -96,23 +79,19 @@ namespace MotionSystem
 
     void StatusReporter::statusTask(void* parameter)
     {
-        StatusReporter* reporter = static_cast<StatusReporter*>(parameter);
-
+        StatusReporter*  reporter      = static_cast<StatusReporter*>(parameter);
         TickType_t       xLastWakeTime = xTaskGetTickCount();
         const TickType_t xFrequency    = Config::System::STATUS_UPDATE_MS;
-
         while (true)
         {
             Types::MicronPosition relPosition = reporter->getRelativePosition();
             Types::MicronPosition relTarget   = reporter->encoder->countsToMicrons(
                 reporter->pidController->getTargetPosition() - reporter->relativeZeroPosition);
-
             if (abs(relPosition - relTarget) > 0.2)
             {
                 reporter->printStatusUpdate();
             }
 
-            // Use vTaskDelayUntil for precise timing
             vTaskDelayUntil(&xLastWakeTime, xFrequency);
         }
     }
@@ -121,10 +100,7 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(statusTask, "Status Updates", Config::Tasks::STATUS_TASK_STACK_SIZE, this,
                                 Config::Tasks::STATUS_TASK_PRIORITY, &taskHandle, Config::Tasks::STATUS_TASK_CORE);
-
         Serial.println(F("Status reporting task started"));
     }
 
 }  // namespace MotionSystem
-
-// End of code

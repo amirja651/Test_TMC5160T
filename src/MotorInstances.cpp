@@ -1,6 +1,5 @@
 #include "MotorInstances.h"
 
-// Define the motors array
 MotionSystem::MotorController motors[MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS] = {
     MotionSystem::MotorController(
         "Motor 1", MotionSystem::Config::SPI::MOTOR1_CS, MotionSystem::Config::TMC5160T_Driver::MOTOR1_STEP_PIN,

@@ -2,10 +2,7 @@
 
 namespace MotionSystem
 {
-
-    // Static instance pointer for ISR access
     static LimitSwitch* limitSwitchInstance = nullptr;
-
     LimitSwitch::LimitSwitch() : triggered(false), emergencyStop(false)
     {
         limitSwitchInstance = this;
@@ -13,9 +10,7 @@ namespace MotionSystem
 
     LimitSwitch::~LimitSwitch()
     {
-        // Detach interrupt
         detachInterrupt(digitalPinToInterrupt(Config::Pins::LIMIT_SWITCH_PIN));
-        // Remove static instance pointer
         if (limitSwitchInstance == this)
         {
             limitSwitchInstance = nullptr;
@@ -24,14 +19,10 @@ namespace MotionSystem
 
     void LimitSwitch::init()
     {
-        // Configure pin with internal pull-up resistor
         pinMode(Config::Pins::LIMIT_SWITCH_PIN, INPUT_PULLUP);
-
-        // Attach interrupt for limit switch (trigger on falling edge - switch closed)
         attachInterrupt(
             digitalPinToInterrupt(Config::Pins::LIMIT_SWITCH_PIN), []() { LimitSwitch::limitSwitchISR(nullptr); },
             FALLING);
-
         Serial.print(F("Limit switch configured on pin "));
         Serial.println(String(Config::Pins::LIMIT_SWITCH_PIN));
     }
@@ -66,5 +57,3 @@ namespace MotionSystem
     }
 
 }  // namespace MotionSystem
-
-// End of code

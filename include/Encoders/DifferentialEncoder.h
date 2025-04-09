@@ -7,7 +7,6 @@
 
 namespace MotionSystem
 {
-
     class DifferentialEncoder : public EncoderInterface
     {
     public:
@@ -25,7 +24,6 @@ namespace MotionSystem
         pcnt_unit_t                     encoderPcntUnit;
         volatile Types::EncoderPosition position;
     };
-
 }  // namespace MotionSystem
 
 #endif  // ESP32_ENCODER_H

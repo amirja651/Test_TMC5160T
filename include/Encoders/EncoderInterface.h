@@ -5,7 +5,6 @@
 
 namespace MotionSystem
 {
-
     class EncoderInterface
     {
     public:
@@ -17,7 +16,6 @@ namespace MotionSystem
         virtual Types::EncoderPosition micronsToEncCounts(Types::MicronPosition microns) = 0;
         virtual Types::PixelPosition   countsToPixels(Types::EncoderPosition counts)     = 0;
     };
-
 }  // namespace MotionSystem
 
 #endif  // ENCODER_INTERFACE_H

@@ -2,10 +2,7 @@
 
 namespace MotionSystem
 {
-
-    // Static instance pointer for ISR access
     static DifferentialEncoder* encoderInstance = nullptr;
-
     DifferentialEncoder::DifferentialEncoder() : encoderPcntUnit(PCNT_UNIT_0), position(0)
     {
         encoderInstance = this;
@@ -13,9 +10,7 @@ namespace MotionSystem
 
     DifferentialEncoder::~DifferentialEncoder()
     {
-        // Clean up ISR handler
         pcnt_isr_handler_remove(encoderPcntUnit);
-        // Remove static instance pointer
         if (encoderInstance == this)
         {
             encoderInstance = nullptr;
@@ -24,7 +19,6 @@ namespace MotionSystem
 
     void DifferentialEncoder::begin()
     {
-        // Configure pulse counter unit for quadrature decoding
         pcnt_config_t pcntConfig = {
             .pulse_gpio_num = Config::Pins::ENCODER_A_PIN,  // Channel A
             .ctrl_gpio_num  = Config::Pins::ENCODER_B_PIN,  // Channel B
@@ -37,26 +31,16 @@ namespace MotionSystem
             .unit           = encoderPcntUnit,
             .channel        = PCNT_CHANNEL_0,
         };
-
         pcnt_unit_config(&pcntConfig);
-
-        // Set up pulse counter events
         pcnt_event_enable(encoderPcntUnit, PCNT_EVT_H_LIM);
         pcnt_event_enable(encoderPcntUnit, PCNT_EVT_L_LIM);
-
-        // Filter out glitches (adjust these values based on encoder specs)
         pcnt_set_filter_value(encoderPcntUnit, 100);
         pcnt_filter_enable(encoderPcntUnit);
-
-        // Start the counter
         pcnt_counter_pause(encoderPcntUnit);
         pcnt_counter_clear(encoderPcntUnit);
         pcnt_counter_resume(encoderPcntUnit);
-
-        // Set up interrupt for overflow handling
         pcnt_isr_service_install(0);
         pcnt_isr_handler_add(encoderPcntUnit, DifferentialEncoder::encoderOverflowISR, nullptr);
-
         Serial.print(F("ESP32 encoder initialized on pins A:"));
         Serial.print(String(Config::Pins::ENCODER_A_PIN));
         Serial.print(F(" B:"));
@@ -100,12 +84,12 @@ namespace MotionSystem
 
         uint32_t status = 0;
         pcnt_get_event_status(encoderInstance->encoderPcntUnit, &status);
-
         if (status & PCNT_EVT_H_LIM)
         {
             encoderInstance->position += 32767;
             pcnt_counter_clear(encoderInstance->encoderPcntUnit);
         }
+
         else if (status & PCNT_EVT_L_LIM)
         {
             encoderInstance->position -= 32768;
@@ -114,5 +98,3 @@ namespace MotionSystem
     }
 
 }  // namespace MotionSystem
-
-// End of code
