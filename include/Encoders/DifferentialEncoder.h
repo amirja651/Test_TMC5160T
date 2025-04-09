@@ -8,61 +8,22 @@
 namespace MotionSystem
 {
 
-    /**
-     * ESP32-specific encoder implementation using hardware pulse counter
-     */
     class DifferentialEncoder : public EncoderInterface
     {
     public:
         DifferentialEncoder();
         ~DifferentialEncoder() override;
-
-        /**
-         * Initialize ESP32 pulse counter hardware
-         */
-        void init() override;
-
-        /**
-         * Read the current encoder position
-         * @return Current position in encoder counts
-         */
+        void                   begin() override;
+        void                   resetPosition() override;
         Types::EncoderPosition readPosition() override;
-
-        /**
-         * Reset the encoder position to zero
-         */
-        void resetPosition() override;
-
-        /**
-         * Convert from encoder counts to microns
-         * @param counts Encoder position in counts
-         * @return Position in microns
-         */
-        Types::MicronPosition countsToMicrons(Types::EncoderPosition counts) override;
-
-        /**
-         * Convert from microns to encoder counts
-         * @param microns Position in microns
-         * @return Position in encoder counts
-         */
+        Types::MicronPosition  countsToMicrons(Types::EncoderPosition counts) override;
         Types::EncoderPosition micronsToEncCounts(Types::MicronPosition microns) override;
-
-        /**
-         * Convert from encoder counts to pixels
-         * @param counts Encoder position in counts
-         * @return Position in pixels
-         */
-        Types::PixelPosition countsToPixels(Types::EncoderPosition counts) override;
-
-        /**
-         * Static ISR handler for pulse counter overflow
-         * @param arg User argument passed to the ISR
-         */
-        static void IRAM_ATTR encoderOverflowISR(void* arg);
+        Types::PixelPosition   countsToPixels(Types::EncoderPosition counts) override;
+        static void IRAM_ATTR  encoderOverflowISR(void* arg);
 
     private:
-        pcnt_unit_t                     encoderPcntUnit;  // ESP32 pulse counter unit
-        volatile Types::EncoderPosition position;         // Extended position counter
+        pcnt_unit_t                     encoderPcntUnit;
+        volatile Types::EncoderPosition position;
     };
 
 }  // namespace MotionSystem

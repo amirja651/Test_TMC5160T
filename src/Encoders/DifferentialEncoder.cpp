@@ -22,7 +22,7 @@ namespace MotionSystem
         }
     }
 
-    void DifferentialEncoder::init()
+    void DifferentialEncoder::begin()
     {
         // Configure pulse counter unit for quadrature decoding
         pcnt_config_t pcntConfig = {

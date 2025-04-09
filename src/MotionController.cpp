@@ -29,7 +29,7 @@ namespace MotionSystem
     void MotionController::init()
     {
         // Initialize components
-        encoder->init();
+        encoder->begin();
         motor->init();
         pidController->init();
         limitSwitch->init();
