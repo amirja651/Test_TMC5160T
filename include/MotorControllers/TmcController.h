@@ -6,12 +6,12 @@
 
 namespace MotionSystem
 {
-    class MotorController
+    class TmcController
     {
     public:
-        MotorController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
-                        uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
-                        uint8_t sckPin = Config::SPI::SCK);
+        TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
+                      uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
+                      uint8_t sckPin = Config::SPI::SCK);
         void     begin();                          // Initialize the motor controller
         void     moveForward();                    // Move motor in forward direction
         void     moveReverse();                    // Move motor in reverse direction
@@ -39,8 +39,7 @@ namespace MotionSystem
         bool     diagnoseTMC5160();
         bool     testCommunication(bool enableMessage = true);
         uint8_t  transfer(uint8_t data);
-        void     enableDriver();
-        void     disableDriver();
+        void     enableDriver(bool enable);
         void     enableSPI();
         void     disableSPI();
         void     resetDriverState();
@@ -53,9 +52,9 @@ namespace MotionSystem
         void           configureDriver2();                      // Configure driver parameters
         void           configureDriver();                       // Configure driver parameters
         void           setupPins();                             // Setup GPIO pins
-        void           step();                                  // Execute single step
+        void IRAM_ATTR step();                                  // Execute single step
         bool           checkAndReinitializeDriver();            // Check and reinitialize driver if needed
-        void           setMovementDirection(bool forward);      // Set movement direction and update state
+        void           setDirection(bool forward);              // Set movement direction and update state
         void           printStatusRegister(uint32_t status);    // Print driver status register
         void           printErrorFlags(uint32_t status);        // Print error flags
         void           printStallGuardStatus(uint32_t status);  // Print stall guard status

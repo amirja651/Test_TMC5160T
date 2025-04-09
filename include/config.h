@@ -54,19 +54,21 @@ namespace MotionSystem
         };
         struct TMC5160T_Driver
         {
-            static const uint8_t NUM_MOTORS      = 4;
-            static const uint8_t MOTOR1_EN_PIN   = ESP32Pins::RightSide::GPIO17;
-            static const uint8_t MOTOR2_EN_PIN   = ESP32Pins::LeftSide::GPIO25;
-            static const uint8_t MOTOR3_EN_PIN   = ESP32Pins::RightSide::GPIO21;
-            static const uint8_t MOTOR4_EN_PIN   = ESP32Pins::RightSide::GPIO22;
-            static const uint8_t MOTOR1_STEP_PIN = ESP32Pins::LeftSide::GPIO26;
-            static const uint8_t MOTOR2_STEP_PIN = ESP32Pins::LeftSide::GPIO27;
-            static const uint8_t MOTOR3_STEP_PIN = ESP32Pins::LeftSide::GPIO32;
-            static const uint8_t MOTOR4_STEP_PIN = ESP32Pins::LeftSide::GPIO33;
-            static const uint8_t MOTOR1_DIR_PIN  = ESP32Pins::LeftSide::GPIO12;
-            static const uint8_t MOTOR2_DIR_PIN  = ESP32Pins::LeftSide::GPIO13;
-            static const uint8_t MOTOR3_DIR_PIN  = ESP32Pins::LeftSide::GPIO14;
-            static const uint8_t MOTOR4_DIR_PIN  = ESP32Pins::RightSide::GPIO2;
+            static const uint8_t NUM_MOTORS        = 4;
+            static const uint8_t NUM_PWM_ENCODERS  = 4;
+            static const uint8_t NUM_DIFF_ENCODERS = 0;
+            static const uint8_t MOTOR1_EN_PIN     = ESP32Pins::RightSide::GPIO17;
+            static const uint8_t MOTOR2_EN_PIN     = ESP32Pins::LeftSide::GPIO25;
+            static const uint8_t MOTOR3_EN_PIN     = ESP32Pins::RightSide::GPIO21;
+            static const uint8_t MOTOR4_EN_PIN     = ESP32Pins::RightSide::GPIO22;
+            static const uint8_t MOTOR1_STEP_PIN   = ESP32Pins::LeftSide::GPIO26;
+            static const uint8_t MOTOR2_STEP_PIN   = ESP32Pins::LeftSide::GPIO27;
+            static const uint8_t MOTOR3_STEP_PIN   = ESP32Pins::LeftSide::GPIO32;
+            static const uint8_t MOTOR4_STEP_PIN   = ESP32Pins::LeftSide::GPIO33;
+            static const uint8_t MOTOR1_DIR_PIN    = ESP32Pins::LeftSide::GPIO12;
+            static const uint8_t MOTOR2_DIR_PIN    = ESP32Pins::LeftSide::GPIO13;
+            static const uint8_t MOTOR3_DIR_PIN    = ESP32Pins::LeftSide::GPIO14;
+            static const uint8_t MOTOR4_DIR_PIN    = ESP32Pins::RightSide::GPIO2;
         };
         namespace CommandHandler
         {
@@ -89,7 +91,10 @@ namespace MotionSystem
             constexpr uint8_t ENABLE_PIN        = 14;
             constexpr uint8_t ENCODER_A_PIN     = 22;
             constexpr uint8_t ENCODER_B_PIN     = 23;
-            constexpr uint8_t ENCODER_P_PIN     = 35;
+            constexpr uint8_t ENCODER_P1_PIN    = 35;
+            constexpr uint8_t ENCODER_P2_PIN    = 35;
+            constexpr uint8_t ENCODER_P3_PIN    = 35;
+            constexpr uint8_t ENCODER_P4_PIN    = 35;
             constexpr uint8_t ENCODER_INDEX_PIN = 21;
             constexpr uint8_t LIMIT_SWITCH_PIN  = 13;
         }  // namespace Pins

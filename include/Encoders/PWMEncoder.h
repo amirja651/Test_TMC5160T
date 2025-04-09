@@ -1,6 +1,7 @@
 #ifndef PWM_ENCODER_H
 #define PWM_ENCODER_H
 
+#include "Config.h"
 #include "EncoderConfig.h"
 #include "EncoderInterface.h"
 #include "EncoderInterruptManager.h"

@@ -4,9 +4,9 @@
 #include "Config.h"
 #include "Encoders\EncoderInterface.h"
 #include "LimitSwitch.h"
+#include "MotorControllers\SimpleController.h"
 #include "PIDController.h"
 #include "StatusReporter.h"
-#include "StepperMotor.h"
 #include "Types.h"
 
 const char errorMessage[] PROGMEM   = "ERROR: Position %.3f µm exceeds relative travel limits (±%.1f mm)";
@@ -22,7 +22,7 @@ namespace MotionSystem
     class MotionController
     {
     public:
-        MotionController(EncoderInterface* encoder, StepperMotor* motor, PIDController* pidController,
+        MotionController(EncoderInterface* encoder, SimpleController* motor, PIDController* pidController,
                          LimitSwitch* limitSwitch, StatusReporter* statusReporter);
         ~MotionController();
         void         init();
@@ -41,7 +41,7 @@ namespace MotionSystem
 
     private:
         EncoderInterface*     encoder;
-        StepperMotor*         motor;
+        SimpleController*     motor;
         PIDController*        pidController;
         LimitSwitch*          limitSwitch;
         StatusReporter*       statusReporter;

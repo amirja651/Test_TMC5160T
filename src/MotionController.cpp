@@ -3,7 +3,7 @@
 
 namespace MotionSystem
 {
-    MotionController::MotionController(EncoderInterface* encoder, StepperMotor* motor, PIDController* pidController,
+    MotionController::MotionController(EncoderInterface* encoder, SimpleController* motor, PIDController* pidController,
                                        LimitSwitch* limitSwitch, StatusReporter* statusReporter)
         : encoder(encoder),
           motor(motor),
@@ -28,7 +28,7 @@ namespace MotionSystem
     void MotionController::init()
     {
         encoder->begin();
-        motor->init();
+        motor->begin();
         pidController->init();
         limitSwitch->init();
         lastStepTime                           = esp_timer_get_time();
@@ -299,7 +299,7 @@ namespace MotionSystem
                 uint64_t now = esp_timer_get_time();
                 if (now - controller->lastStepTime >= stepInterval)
                 {
-                    controller->motor->generateStep();
+                    controller->motor->step();
                     controller->lastStepTime = now;
                 }
             }

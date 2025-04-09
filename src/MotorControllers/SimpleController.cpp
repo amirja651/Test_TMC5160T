@@ -1,10 +1,10 @@
-#include "StepperMotor.h"
+#include "MotorControllers\SimpleController.h"
 
 namespace MotionSystem
 {
-    StepperMotor::StepperMotor() : currentStepPosition(0) {}
+    SimpleController ::SimpleController() : currentStepPosition(0) {}
 
-    void StepperMotor::init()
+    void SimpleController ::begin()
     {
         pinMode(Config::Pins::STEP_PIN, OUTPUT);
         pinMode(Config::Pins::DIR_PIN, OUTPUT);
@@ -18,37 +18,37 @@ namespace MotionSystem
         Serial.println(String(Config::Pins::ENABLE_PIN));
     }
 
-    void StepperMotor::enable(bool enable)
+    void SimpleController ::enableDriver(bool enable)
     {
         digitalWrite(Config::Pins::ENABLE_PIN, enable ? LOW : HIGH);
     }
 
-    void StepperMotor::setDirection(bool dir)
+    void SimpleController ::setDirection(bool dir)
     {
         digitalWrite(Config::Pins::DIR_PIN, dir);
         delayMicroseconds(5);  // Direction setup time
     }
 
-    void IRAM_ATTR StepperMotor::generateStep()
+    void IRAM_ATTR SimpleController ::step()
     {
         digitalWrite(Config::Pins::STEP_PIN, HIGH);
         delayMicroseconds(2);  // Minimum pulse width (check driver specs)
         digitalWrite(Config::Pins::STEP_PIN, LOW);
     }
 
-    uint32_t StepperMotor::calculateStepInterval(Types::Speed speed)
+    uint32_t SimpleController ::calculateStepInterval(Types::Speed speed)
     {
         if (abs(speed) < 1)
             return 0;                 // Prevent division by zero
         return 1000000 / abs(speed);  // Convert Hz to microseconds
     }
 
-    Types::StepPosition StepperMotor::micronsToSteps(Types::MicronPosition microns)
+    Types::StepPosition SimpleController ::micronsToSteps(Types::MicronPosition microns)
     {
         return roundf(microns * Config::System::MOTOR_STEPS_PER_MICRON);
     }
 
-    Types::StepPosition StepperMotor::pixelsToSteps(Types::PixelPosition pixels)
+    Types::StepPosition SimpleController ::pixelsToSteps(Types::PixelPosition pixels)
     {
         return micronsToSteps(pixels * Config::System::PIXEL_SIZE);
     }

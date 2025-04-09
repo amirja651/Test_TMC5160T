@@ -13,36 +13,20 @@
 #include <Arduino.h>
 #include "CommandHandler.h"
 #include "Config.h"
-#include "Encoders/EncoderConfig.h"
-#include "Encoders/EncoderFactory.h"
+#include "Encoders/EncoderInstances.h"
+
 #include "LimitSwitch.h"
 #include "MotionController.h"
+#include "MotorControllers\SimpleController.h"
 #include "PIDController.h"
 #include "StatusReporter.h"
-#include "StepperMotor.h"
 #include "Types.h"
 
 using namespace MotionSystem::Types;
 
-// Create encoder configurations
-MotionSystem::EncoderConfig diffEncoderConfig = MotionSystem::EncoderFactory::createDifferentialConfig(
-    MotionSystem::Config::Pins::ENCODER_A_PIN, MotionSystem::Config::Pins::ENCODER_B_PIN, 0);
-
-MotionSystem::EncoderConfig pwmEncoderConfig =
-    MotionSystem::EncoderFactory::createPWMConfig(MotionSystem::Config::Pins::ENCODER_P_PIN,  // signal pin
-                                                  MotionSystem::Config::Pins::ENCODER_P_PIN   // interrupt pin
-    );
-
-// Create encoders using factory
-MotionSystem::EncoderInterface* diffEncoder = MotionSystem::EncoderFactory::createEncoder(
-    MotionSystem::EncoderFactory::EncoderType::DIFFERENTIAL, diffEncoderConfig);
-
-MotionSystem::EncoderInterface* pwmEncoder =
-    MotionSystem::EncoderFactory::createEncoder(MotionSystem::EncoderFactory::EncoderType::PWM, pwmEncoderConfig);
-
-MotionSystem::StepperMotor     motor;
+MotionSystem::SimpleController motor;
 MotionSystem::LimitSwitch      limitSwitch;
-MotionSystem::PIDController    pidController(diffEncoder);
+MotionSystem::PIDController    pidController(pwmEncoders[0]);
 MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
 MotionSystem::MotionController motionController(diffEncoder, &motor, &pidController, &limitSwitch, &statusReporter);
 TaskHandle_t                   serialTaskHandle       = NULL;
@@ -209,9 +193,8 @@ void setup()
 
     Serial.println(F("\n ==================== Initializing High Precision Motion Control System ===================="));
 
-    // Initialize encoders
-    diffEncoder->begin();
-    pwmEncoder->begin();
+    initializeMotors();
+    initializePWMEncoders();
 
     motionController.init();
     pidController.startTask();
@@ -225,7 +208,6 @@ void setup()
             ;
     }
 
-    initializeMotors();
     MotionSystem::CommandHandler::getInstance().printCommandGuide();
     xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);
     xTaskCreate(commandTask, "CommandTask", 4096, NULL, 2, &commandTaskHandle);
@@ -241,8 +223,8 @@ void loop()
     motionController.processCommands();
 
     // Read and display PWM encoder position
-    MotionSystem::Types::EncoderPosition pwmPosition = pwmEncoder->readPosition();
-    MotionSystem::Types::MicronPosition  pwmMicrons  = pwmEncoder->countsToMicrons(pwmPosition);
+    MotionSystem::Types::EncoderPosition pwmPosition = pwmEncoders[0]->readPosition();
+    MotionSystem::Types::MicronPosition  pwmMicrons  = pwmEncoders[0]->countsToMicrons(pwmPosition);
 
     Serial.print(F("PWM Encoder Position: "));
     Serial.print(pwmPosition);

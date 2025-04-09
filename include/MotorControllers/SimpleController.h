@@ -6,15 +6,15 @@
 
 namespace MotionSystem
 {
-    class StepperMotor
+    class SimpleController
     {
     public:
-        StepperMotor();
-        ~StepperMotor() = default;
-        void                init();
-        void                enable(bool enable);
-        void                setDirection(bool dir);
-        void IRAM_ATTR      generateStep();
+        SimpleController();
+        ~SimpleController() = default;
+        void                begin();
+        void                enableDriver(bool enable);
+        void                setDirection(bool forward);
+        void IRAM_ATTR      step();
         uint32_t            calculateStepInterval(Types::Speed speed);
         Types::StepPosition micronsToSteps(Types::MicronPosition microns);
         Types::StepPosition pixelsToSteps(Types::PixelPosition pixels);

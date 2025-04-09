@@ -2,7 +2,7 @@
 #define COMMAND_HANDLER_H
 
 #include "Config.h"
-#include "MotorInstances.h"
+#include "MotorControllers\MotorInstances.h"
 
 namespace MotionSystem
 {

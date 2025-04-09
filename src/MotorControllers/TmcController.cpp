@@ -1,7 +1,7 @@
-#include "MotorController.h"
+#include "MotorControllers\TmcController.h"
 
-MotionSystem::MotorController::MotorController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin,
-                                               uint8_t enPin, uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)
+MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin,
+                                           uint8_t enPin, uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)
     : driver(csPin, mosiPin, misoPin, sckPin),
       instanceName(name),
       csPin(csPin),
@@ -36,7 +36,7 @@ MotionSystem::MotorController::MotorController(const char* name, uint8_t csPin, 
 {
 }
 
-void MotionSystem::MotorController::begin()
+void MotionSystem::TmcController::begin()
 {
     setupPins();
     disableSPI();
@@ -44,7 +44,7 @@ void MotionSystem::MotorController::begin()
     configureDriver2();
 }
 
-void MotionSystem::MotorController::moveForward()
+void MotionSystem::TmcController::moveForward()
 {
     if (!diagnoseTMC5160())
     {
@@ -52,10 +52,10 @@ void MotionSystem::MotorController::moveForward()
         return;
     }
 
-    setMovementDirection(true);
+    setDirection(true);
 }
 
-void MotionSystem::MotorController::moveReverse()
+void MotionSystem::TmcController::moveReverse()
 {
     if (!diagnoseTMC5160())
     {
@@ -63,16 +63,16 @@ void MotionSystem::MotorController::moveReverse()
         return;
     }
 
-    setMovementDirection(false);
+    setDirection(false);
 }
 
-void MotionSystem::MotorController::stop()
+void MotionSystem::TmcController::stop()
 {
     isMoving = false;
     driver.ihold(100);  // Reduce to ultra low hold current
 }
 
-void MotionSystem::MotorController::update()
+void MotionSystem::TmcController::update()
 {
     if (isMoving)
     {
@@ -189,12 +189,12 @@ void MotionSystem::MotorController::update()
     }
 }
 
-uint32_t MotionSystem::MotorController::getDriverStatus()
+uint32_t MotionSystem::TmcController::getDriverStatus()
 {
     return driver.DRV_STATUS();
 }
 
-void MotionSystem::MotorController::increaseRunCurrent()
+void MotionSystem::TmcController::increaseRunCurrent()
 {
     if (runCurrent < 1000)
     {
@@ -211,7 +211,7 @@ void MotionSystem::MotorController::increaseRunCurrent()
     }
 }
 
-void MotionSystem::MotorController::decreaseRunCurrent()
+void MotionSystem::TmcController::decreaseRunCurrent()
 {
     if (runCurrent > 100)
     {
@@ -228,7 +228,7 @@ void MotionSystem::MotorController::decreaseRunCurrent()
     }
 }
 
-void MotionSystem::MotorController::increaseHoldCurrent()
+void MotionSystem::TmcController::increaseHoldCurrent()
 {
     if (holdCurrent < 500)
     {
@@ -245,7 +245,7 @@ void MotionSystem::MotorController::increaseHoldCurrent()
     }
 }
 
-void MotionSystem::MotorController::decreaseHoldCurrent()
+void MotionSystem::TmcController::decreaseHoldCurrent()
 {
     if (holdCurrent > 100)
     {
@@ -262,17 +262,17 @@ void MotionSystem::MotorController::decreaseHoldCurrent()
     }
 }
 
-uint16_t MotionSystem::MotorController::getRunCurrent() const
+uint16_t MotionSystem::TmcController::getRunCurrent() const
 {
     return runCurrent;
 }
 
-uint16_t MotionSystem::MotorController::getHoldCurrent() const
+uint16_t MotionSystem::TmcController::getHoldCurrent() const
 {
     return holdCurrent;
 }
 
-void MotionSystem::MotorController::increaseSpeed()
+void MotionSystem::TmcController::increaseSpeed()
 {
     if (speed < 10000)
     {
@@ -288,7 +288,7 @@ void MotionSystem::MotorController::increaseSpeed()
     }
 }
 
-void MotionSystem::MotorController::decreaseSpeed()
+void MotionSystem::TmcController::decreaseSpeed()
 {
     if (speed > 100)
     {
@@ -304,7 +304,7 @@ void MotionSystem::MotorController::decreaseSpeed()
     }
 }
 
-void MotionSystem::MotorController::increaseAcceleration()
+void MotionSystem::TmcController::increaseAcceleration()
 {
     if (acceleration < 10000)
     {
@@ -321,7 +321,7 @@ void MotionSystem::MotorController::increaseAcceleration()
     }
 }
 
-void MotionSystem::MotorController::decreaseAcceleration()
+void MotionSystem::TmcController::decreaseAcceleration()
 {
     if (acceleration > 100)
     {
@@ -338,17 +338,17 @@ void MotionSystem::MotorController::decreaseAcceleration()
     }
 }
 
-uint16_t MotionSystem::MotorController::getSpeed() const
+uint16_t MotionSystem::TmcController::getSpeed() const
 {
     return speed;
 }
 
-uint16_t MotionSystem::MotorController::getAcceleration() const
+uint16_t MotionSystem::TmcController::getAcceleration() const
 {
     return acceleration;
 }
 
-void MotionSystem::MotorController::printDriverStatus()
+void MotionSystem::TmcController::printDriverStatus()
 {
     uint32_t status = driver.DRV_STATUS();
     Serial.println(F("🧠 DRV_STATUS Report"));
@@ -391,7 +391,7 @@ void MotionSystem::MotorController::printDriverStatus()
     Serial.println(F("──────────────────────────────────────────────"));
 }
 
-void MotionSystem::MotorController::printDriverConfig()
+void MotionSystem::TmcController::printDriverConfig()
 {
     Serial.println(F("\nDriver Configuration:"));
     Serial.println(F("-------------------"));
@@ -429,14 +429,14 @@ void MotionSystem::MotorController::printDriverConfig()
     Serial.println(driver.XDIRECT(), HEX);
 }
 
-int MotionSystem::MotorController::getTemperature()
+int MotionSystem::TmcController::getTemperature()
 {
     uint32_t status  = driver.DRV_STATUS();
     int      rawTemp = (status >> 16) & 0xFF;  // Temperature is in bits 16-23
     return rawTemp;                            // Direct temperature reading in °C (1°C steps)
 }
 
-void MotionSystem::MotorController::printTemperature()
+void MotionSystem::TmcController::printTemperature()
 {
     int temp = getTemperature();
     if (temp != lastTemperature)
@@ -449,7 +449,7 @@ void MotionSystem::MotorController::printTemperature()
     }
 }
 
-void MotionSystem::MotorController::toggleStealthChop()
+void MotionSystem::TmcController::toggleStealthChop()
 {
     uint32_t currentThreshold = driver.TPWMTHRS();
     if (currentThreshold == 0)
@@ -465,7 +465,7 @@ void MotionSystem::MotorController::toggleStealthChop()
     }
 }
 
-void MotionSystem::MotorController::setStealthChopMode(bool enable)
+void MotionSystem::TmcController::setStealthChopMode(bool enable)
 {
     driver.en_pwm_mode(true);  // Ensure StealthChop is available
     if (enable)
@@ -481,7 +481,7 @@ void MotionSystem::MotorController::setStealthChopMode(bool enable)
     }
 }
 
-bool MotionSystem::MotorController::diagnoseTMC5160()
+bool MotionSystem::TmcController::diagnoseTMC5160()
 {
     uint32_t status = driver.DRV_STATUS();
     bool     ok     = true;
@@ -529,10 +529,12 @@ bool MotionSystem::MotorController::diagnoseTMC5160()
     return ok;
 }
 
-bool MotionSystem::MotorController::testCommunication(bool enableMessage)
+bool MotionSystem::TmcController::testCommunication(bool enableMessage)
 {
     if (enableMessage)
     {
+        Serial.print(instanceName);
+        Serial.print(F(" - "));
         Serial.print(F("Testing SPI communication with TMC5160: "));
     }
 
@@ -557,70 +559,65 @@ bool MotionSystem::MotorController::testCommunication(bool enableMessage)
     return true;
 }
 
-uint8_t MotionSystem::MotorController::transfer(uint8_t data)
+uint8_t MotionSystem::TmcController::transfer(uint8_t data)
 {
     return SPI.transfer(data);
 }
 
-void MotionSystem::MotorController::enableDriver()
+void MotionSystem::TmcController::enableDriver(bool enable)
 {
-    digitalWrite(enPin, LOW);
+    digitalWrite(enPin, enable ? LOW : HIGH);
 }
 
-void MotionSystem::MotorController::disableDriver()
-{
-    digitalWrite(enPin, HIGH);
-}
-
-void MotionSystem::MotorController::enableSPI()
+void MotionSystem::TmcController::enableSPI()
 {
     digitalWrite(csPin, LOW);
     delay(5);
 }
 
-void MotionSystem::MotorController::disableSPI()
+void MotionSystem::TmcController::disableSPI()
 {
     digitalWrite(csPin, HIGH);
     delay(5);
 }
 
-void MotionSystem::MotorController::resetDriverState()
+void MotionSystem::TmcController::resetDriverState()
 {
-    disableDriver();
-    enableDriver();
+    enableDriver(false);
+    enableDriver(true);
 }
 
-void MotionSystem::MotorController::setSpreadCycle(bool enable)
+void MotionSystem::TmcController::setSpreadCycle(bool enable)
 {
     spreadCycleEnabled = enable;
     driver.en_pwm_mode(!enable);  // 0 for spread cycle, 1 for stealthChop
 }
 
-void MotionSystem::MotorController::setRampMode(uint8_t mode)
+void MotionSystem::TmcController::setRampMode(uint8_t mode)
 {
     rampMode = mode;
     driver.RAMPMODE(mode);
 }
 
-void MotionSystem::MotorController::setMaxSpeed(uint32_t speed)
+void MotionSystem::TmcController::setMaxSpeed(uint32_t speed)
 {
     maxSpeed = speed;
     driver.VMAX(speed);
 }
 
-void MotionSystem::MotorController::setMaxAcceleration(uint32_t accel)
+void MotionSystem::TmcController::setMaxAcceleration(uint32_t accel)
 {
     maxAcceleration = accel;
     driver.a1(accel);
 }
 
-void MotionSystem::MotorController::setMaxDeceleration(uint32_t decel)
+void MotionSystem::TmcController::setMaxDeceleration(uint32_t decel)
 {
     maxDeceleration = decel;
     driver.d1(decel);
 }
 
-void MotionSystem::MotorController::configureDriver2()
+void MotionSystem::TmcController::configureDriver2()
 {
     driver.begin();
     delay(5);
@@ -666,11 +663,11 @@ void MotionSystem::MotorController::configureDriver2()
     driver.a1(maxAcceleration);
     driver.v1(maxSpeed / 2);
     driver.d1(maxDeceleration);
-    enableDriver();
+    enableDriver(true);
     delay(5);
 }
 
-void MotionSystem::MotorController::configureDriver()
+void MotionSystem::TmcController::configureDriver()
 {
     driver.begin();
     delay(5);
@@ -713,11 +710,11 @@ void MotionSystem::MotorController::configureDriver()
     driver.d1(maxDeceleration);
     driver.VSTART(0);
     driver.VSTOP(5);
-    enableDriver();
+    enableDriver(true);
     delay(5);
 }
 
-void MotionSystem::MotorController::setupPins()
+void MotionSystem::TmcController::setupPins()
 {
     pinMode(stepPin, OUTPUT);
     pinMode(dirPin, OUTPUT);
@@ -726,7 +723,7 @@ void MotionSystem::MotorController::setupPins()
     delay(5);
 }
 
-void MotionSystem::MotorController::step()
+void IRAM_ATTR MotionSystem::TmcController::step()
 {
     digitalWrite(stepPin, HIGH);
     delayMicroseconds(10);
@@ -735,12 +732,12 @@ void MotionSystem::MotorController::step()
     stepCounter  = (stepCounter + 1) % 1000;
 }
 
-bool MotionSystem::MotorController::checkAndReinitializeDriver()
+bool MotionSystem::TmcController::checkAndReinitializeDriver()
 {
     uint32_t status = driver.DRV_STATUS();
     if (status == 0 || status == 0xFFFFFFFF)
     {
-        disableDriver();
+        enableDriver(false);
         disableSPI();
         enableSPI();
         configureDriver2();
@@ -750,7 +747,7 @@ bool MotionSystem::MotorController::checkAndReinitializeDriver()
     return false;
 }
 
-void MotionSystem::MotorController::setMovementDirection(bool forward)
+void MotionSystem::TmcController::setDirection(bool forward)
 {
     isMoving  = true;
     direction = forward;
@@ -760,7 +757,7 @@ void MotionSystem::MotorController::setMovementDirection(bool forward)
     Serial.println(forward ? F("Forward") : F("Reverse"));
 }
 
-void MotionSystem::MotorController::printStatusRegister(uint32_t status)
+void MotionSystem::TmcController::printStatusRegister(uint32_t status)
 {
     Serial.println(F("\nDriver Status Register:"));
     Serial.print(F("Raw Status: 0x"));
@@ -770,7 +767,7 @@ void MotionSystem::MotorController::printStatusRegister(uint32_t status)
     printDriverState(status);
 }
 
-void MotionSystem::MotorController::printErrorFlags(uint32_t status)
+void MotionSystem::TmcController::printErrorFlags(uint32_t status)
 {
     Serial.println(F("\nError Flags:"));
     Serial.print(F("  Over Temperature: "));
@@ -785,7 +782,7 @@ void MotionSystem::MotorController::printErrorFlags(uint32_t status)
     Serial.println((status & 0x00000010) ? F("Yes") : F("No"));
 }
 
-void MotionSystem::MotorController::printStallGuardStatus(uint32_t status)
+void MotionSystem::TmcController::printStallGuardStatus(uint32_t status)
 {
     Serial.println(F("\nStallGuard Status:"));
     Serial.print(F("  StallGuard Value: "));
@@ -794,7 +791,7 @@ void MotionSystem::MotorController::printStallGuardStatus(uint32_t status)
     Serial.println((status & 0x00000200) ? F("Yes") : F("No"));
 }
 
-void MotionSystem::MotorController::printDriverState(uint32_t status)
+void MotionSystem::TmcController::printDriverState(uint32_t status)
 {
     Serial.println(F("\nDriver State:"));
     Serial.print(F("  Standstill: "));
