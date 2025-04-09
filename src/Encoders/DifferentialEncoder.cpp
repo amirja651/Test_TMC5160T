@@ -1,17 +1,17 @@
-#include "ESP32Encoder.h"
+#include "Encoders\DifferentialEncoder.h"
 
 namespace MotionSystem
 {
 
     // Static instance pointer for ISR access
-    static ESP32Encoder* encoderInstance = nullptr;
+    static DifferentialEncoder* encoderInstance = nullptr;
 
-    ESP32Encoder::ESP32Encoder() : encoderPcntUnit(PCNT_UNIT_0), position(0)
+    DifferentialEncoder::DifferentialEncoder() : encoderPcntUnit(PCNT_UNIT_0), position(0)
     {
         encoderInstance = this;
     }
 
-    ESP32Encoder::~ESP32Encoder()
+    DifferentialEncoder::~DifferentialEncoder()
     {
         // Clean up ISR handler
         pcnt_isr_handler_remove(encoderPcntUnit);
@@ -22,7 +22,7 @@ namespace MotionSystem
         }
     }
 
-    void ESP32Encoder::init()
+    void DifferentialEncoder::init()
     {
         // Configure pulse counter unit for quadrature decoding
         pcnt_config_t pcntConfig = {
@@ -55,7 +55,7 @@ namespace MotionSystem
 
         // Set up interrupt for overflow handling
         pcnt_isr_service_install(0);
-        pcnt_isr_handler_add(encoderPcntUnit, ESP32Encoder::encoderOverflowISR, nullptr);
+        pcnt_isr_handler_add(encoderPcntUnit, DifferentialEncoder::encoderOverflowISR, nullptr);
 
         Serial.print(F("ESP32 encoder initialized on pins A:"));
         Serial.print(String(Config::Pins::ENCODER_A_PIN));
@@ -63,35 +63,35 @@ namespace MotionSystem
         Serial.println(String(Config::Pins::ENCODER_B_PIN));
     }
 
-    Types::EncoderPosition ESP32Encoder::readPosition()
+    Types::EncoderPosition DifferentialEncoder::readPosition()
     {
         int16_t count = 0;
         pcnt_get_counter_value(encoderPcntUnit, &count);
         return position + count;
     }
 
-    void ESP32Encoder::resetPosition()
+    void DifferentialEncoder::resetPosition()
     {
         position = 0;
         pcnt_counter_clear(encoderPcntUnit);
     }
 
-    Types::MicronPosition ESP32Encoder::countsToMicrons(Types::EncoderPosition counts)
+    Types::MicronPosition DifferentialEncoder::countsToMicrons(Types::EncoderPosition counts)
     {
         return static_cast<Types::MicronPosition>(counts) / Config::System::ENCODER_COUNTS_PER_MICRON;
     }
 
-    Types::EncoderPosition ESP32Encoder::micronsToEncCounts(Types::MicronPosition microns)
+    Types::EncoderPosition DifferentialEncoder::micronsToEncCounts(Types::MicronPosition microns)
     {
         return static_cast<Types::EncoderPosition>(microns * MotionSystem::Config::System::ENCODER_COUNTS_PER_MICRON);
     }
 
-    Types::PixelPosition ESP32Encoder::countsToPixels(Types::EncoderPosition counts)
+    Types::PixelPosition DifferentialEncoder::countsToPixels(Types::EncoderPosition counts)
     {
         return countsToMicrons(counts) / Config::System::PIXEL_SIZE;
     }
 
-    void IRAM_ATTR ESP32Encoder::encoderOverflowISR(void* arg)
+    void IRAM_ATTR DifferentialEncoder::encoderOverflowISR(void* arg)
     {
         if (!encoderInstance)
         {

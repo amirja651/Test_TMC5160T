@@ -5,14 +5,14 @@
 
 namespace MotionSystem
 {
-    class MAE3Encoder
+    class PWMEncoder
     {
     public:
         /**
-         * @brief Constructor for MAE3Encoder
+         * @brief Constructor for PWMEncoder
          * @param signalPin GPIO pin connected to encoder PWM output
          */
-        MAE3Encoder(uint8_t signalPin);
+        PWMEncoder(uint8_t signalPin);
 
         /**
          * @brief Initialize the encoder
@@ -47,7 +47,7 @@ namespace MotionSystem
         unsigned long lastUpdateTime;  // Last update timestamp
 
         // Interrupt-related members
-        static MAE3Encoder*    instance;           // Static instance pointer for interrupt handler
+        static PWMEncoder*     instance;           // Static instance pointer for interrupt handler
         volatile unsigned long pulseStartTime;     // Start time of current pulse
         volatile unsigned long currentPulseWidth;  // Current pulse width measurement
         volatile bool          newPulseAvailable;  // Flag indicating new pulse measurement

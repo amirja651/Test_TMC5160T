@@ -5,15 +5,17 @@
 #include "Config.h"
 #include "EncoderInterface.h"
 
-namespace MotionSystem {
+namespace MotionSystem
+{
 
     /**
      * ESP32-specific encoder implementation using hardware pulse counter
      */
-    class ESP32Encoder : public EncoderInterface {
+    class DifferentialEncoder : public EncoderInterface
+    {
     public:
-        ESP32Encoder();
-        ~ESP32Encoder() override;
+        DifferentialEncoder();
+        ~DifferentialEncoder() override;
 
         /**
          * Initialize ESP32 pulse counter hardware

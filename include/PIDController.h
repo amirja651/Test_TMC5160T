@@ -2,15 +2,17 @@
 #define PID_CONTROLLER_H
 
 #include "Config.h"
-#include "EncoderInterface.h"
+#include "Encoders\EncoderInterface.h"
 #include "Types.h"
 
-namespace MotionSystem {
+namespace MotionSystem
+{
 
     /**
      * PID controller for closed-loop position control
      */
-    class PIDController {
+    class PIDController
+    {
     public:
         PIDController(EncoderInterface* encoder);
         ~PIDController();

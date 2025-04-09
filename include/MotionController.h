@@ -2,7 +2,7 @@
 #define MOTION_CONTROLLER_H
 
 #include "Config.h"
-#include "EncoderInterface.h"
+#include "Encoders\EncoderInterface.h"
 #include "LimitSwitch.h"
 #include "PIDController.h"
 #include "StatusReporter.h"

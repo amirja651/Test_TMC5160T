@@ -2,20 +2,21 @@
 #define STATUS_REPORTER_H
 
 #include "Config.h"
-#include "EncoderInterface.h"
+#include "Encoders\EncoderInterface.h"
 #include "LimitSwitch.h"
 #include "PIDController.h"
 #include "Types.h"
 
-namespace MotionSystem {
+namespace MotionSystem
+{
 
     /**
      * Handles periodic status reporting
      */
-    class StatusReporter {
+    class StatusReporter
+    {
     public:
-        StatusReporter(EncoderInterface* encoder, PIDController* pidController,
-                       LimitSwitch* limitSwitch);
+        StatusReporter(EncoderInterface* encoder, PIDController* pidController, LimitSwitch* limitSwitch);
         ~StatusReporter();
 
         /**

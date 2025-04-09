@@ -3,12 +3,14 @@
 
 #include "Types.h"
 
-namespace MotionSystem {
+namespace MotionSystem
+{
 
     /**
      * Abstract interface for position encoders
      */
-    class EncoderInterface {
+    class EncoderInterface
+    {
     public:
         virtual ~EncoderInterface() = default;
 

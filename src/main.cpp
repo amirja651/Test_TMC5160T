@@ -13,9 +13,9 @@
 #include <Arduino.h>
 #include "CommandHandler.h"
 #include "Config.h"
-#include "ESP32Encoder.h"
+#include "Encoders\DifferentialEncoder.h"
+#include "Encoders\PWMEncoder.h"
 #include "LimitSwitch.h"
-#include "MAE3Encoder.h"
 #include "MotionController.h"
 #include "PIDController.h"
 #include "StatusReporter.h"
@@ -23,13 +23,13 @@
 #include "Types.h"
 
 // Create instances of system components
-MotionSystem::MAE3Encoder      encoder2(35);
-MotionSystem::ESP32Encoder     encoder;
-MotionSystem::StepperMotor     motor;
-MotionSystem::LimitSwitch      limitSwitch;
-MotionSystem::PIDController    pidController(&encoder);
-MotionSystem::StatusReporter   statusReporter(&encoder, &pidController, &limitSwitch);
-MotionSystem::MotionController motionController(&encoder, &motor, &pidController, &limitSwitch, &statusReporter);
+MotionSystem::PWMEncoder          encoder2(35);
+MotionSystem::DifferentialEncoder encoder;
+MotionSystem::StepperMotor        motor;
+MotionSystem::LimitSwitch         limitSwitch;
+MotionSystem::PIDController       pidController(&encoder);
+MotionSystem::StatusReporter      statusReporter(&encoder, &pidController, &limitSwitch);
+MotionSystem::MotionController    motionController(&encoder, &motor, &pidController, &limitSwitch, &statusReporter);
 
 // Task handles
 TaskHandle_t serialTaskHandle       = NULL;
