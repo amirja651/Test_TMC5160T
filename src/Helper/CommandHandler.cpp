@@ -1,4 +1,5 @@
-#include "CommandHandler.h"
+#include "Helper/CommandHandler.h"
+#include "Globals.h"
 
 MotionSystem::CommandHandler* MotionSystem::CommandHandler::instance = nullptr;
 

@@ -3,7 +3,6 @@
 
 #include <TMCStepper.h>
 #include "Config.h"
-#include "Types.h"
 
 namespace MotionSystem
 {

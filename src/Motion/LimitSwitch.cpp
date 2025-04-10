@@ -1,4 +1,4 @@
-#include "LimitSwitch.h"
+#include "Motion/LimitSwitch.h"
 
 namespace MotionSystem
 {

@@ -5,7 +5,6 @@
 #include "EncoderConfig.h"
 #include "EncoderInterface.h"
 #include "EncoderInterruptManager.h"
-#include "Types.h"
 
 namespace MotionSystem
 {

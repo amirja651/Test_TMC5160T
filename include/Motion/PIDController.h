@@ -2,8 +2,7 @@
 #define PID_CONTROLLER_H
 
 #include "Config.h"
-#include "Encoders\EncoderInterface.h"
-#include "Types.h"
+#include "Encoders/EncoderInterface.h"
 
 namespace MotionSystem
 {

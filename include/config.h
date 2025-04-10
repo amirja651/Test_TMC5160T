@@ -5,10 +5,32 @@
 #include <stdint.h>
 
 namespace MotionSystem
-{
+{  // namespace ESP32Pins
+    namespace Types
+    {
+        using EncoderPosition  = int32_t;
+        using MicronPosition   = float;
+        using PixelPosition    = float;
+        using StepPosition     = int32_t;
+        using Speed            = float;
+        using Acceleration     = float;
+        using StatusCallback   = std::function<void(bool)>;
+        using CompleteCallback = std::function<void(void)>;
+
+        enum class ErrorCode
+        {
+            SUCCESS = 0,
+            LIMIT_SWITCH_TRIGGERED,
+            POSITION_OUT_OF_BOUNDS,
+            CALIBRATION_FAILED,
+            TIMEOUT
+        };
+    }  // namespace Types
+
+    // namespace ESP32Pins
     namespace ESP32Pins
     {
-        struct LeftSide
+        namespace LeftSide
         {
             static const uint8_t GPIO36 = 36;  // Input only, ADC1_0
             static const uint8_t GPIO39 = 39;  // Input only, ADC1_3
@@ -22,8 +44,9 @@ namespace MotionSystem
             static const uint8_t GPIO14 = 14;  // ADC2_6, Touch6
             static const uint8_t GPIO12 = 12;  // ADC2_5, Touch5
             static const uint8_t GPIO13 = 13;  // ADC2_4, Touch4
-        };
-        struct RightSide
+        }  // namespace LeftSide
+
+        namespace RightSide
         {
             static const uint8_t GPIO23 = 23;  // MOSI, V_SPI_D
             static const uint8_t GPIO22 = 22;  // V_SPI_WP
@@ -38,11 +61,12 @@ namespace MotionSystem
             static const uint8_t GPIO4  = 4;   // ADC2_0, Touch0
             static const uint8_t GPIO2  = 2;   // ADC2_2, Touch2
             static const uint8_t GPIO15 = 15;  // ADC2_3, Touch3
-        };
-    };  // namespace ESP32Pins
+        }  // namespace RightSide
+    }  // namespace ESP32Pins
+
     namespace Config
     {
-        struct SPI
+        namespace SPI
         {
             static const uint8_t MOSI      = ESP32Pins::RightSide::GPIO23;
             static const uint8_t MISO      = ESP32Pins::RightSide::GPIO19;
@@ -51,8 +75,9 @@ namespace MotionSystem
             static const uint8_t MOTOR2_CS = ESP32Pins::RightSide::GPIO5;
             static const uint8_t MOTOR3_CS = ESP32Pins::RightSide::GPIO15;
             static const uint8_t MOTOR4_CS = ESP32Pins::RightSide::GPIO16;
-        };
-        struct TMC5160T_Driver
+        }  // namespace SPI
+
+        namespace TMC5160T_Driver
         {
             static const uint8_t NUM_MOTORS        = 4;
             static const uint8_t NUM_PWM_ENCODERS  = 4;
@@ -69,21 +94,8 @@ namespace MotionSystem
             static const uint8_t MOTOR2_DIR_PIN    = ESP32Pins::LeftSide::GPIO13;
             static const uint8_t MOTOR3_DIR_PIN    = ESP32Pins::LeftSide::GPIO14;
             static const uint8_t MOTOR4_DIR_PIN    = ESP32Pins::RightSide::GPIO2;
-        };
-        namespace CommandHandler
-        {
-            constexpr char CMD_FORWARD     = 'w';  // *
-            constexpr char CMD_REVERSE     = 's';  // *
-            constexpr char CMD_STOP        = 'x';  // *
-            constexpr char CMD_RESET       = 'z';
-            constexpr char CMD_TEST_SPI    = 't';  // *
-            constexpr char CMD_SHOW_STATUS = 'i';  // *
-            constexpr char CMD_SHOW_CONFIG = 'p';  // *
-            constexpr char CMD_SHOW_TEMP   = 'm';
-            constexpr char CMD_TOGGLE_MODE = 'n';
-            constexpr char CMD_HELP        = 'h';  // *
-            constexpr char CMD_HELP_ALT    = '?';  // *
-        }  // namespace CommandHandler
+        }  // namespace TMC5160T_Driver
+
         namespace Pins
         {
             constexpr uint8_t STEP_PIN          = 32;
@@ -98,6 +110,7 @@ namespace MotionSystem
             constexpr uint8_t ENCODER_INDEX_PIN = 21;
             constexpr uint8_t LIMIT_SWITCH_PIN  = 13;
         }  // namespace Pins
+
         namespace System
         {
             static const uint32_t SERIAL_BAUD_RATE         = 115200;  // Serial communication speed
@@ -115,12 +128,14 @@ namespace MotionSystem
             constexpr float       MOTOR_STEPS_PER_MICRON = (STEPS_PER_REV * MICROSTEPS) / (LEAD_SCREW_PITCH * 1000.0f);
             constexpr float       ENCODER_COUNTS_PER_MICRON = (ENCODER_PPR * 4.0f) / (LEAD_SCREW_PITCH * 1000.0f);
         }  // namespace System
+
         namespace Motion
         {
             constexpr uint16_t MAX_SPEED       = 5000;   // Maximum step frequency in Hz
             constexpr uint16_t ACCELERATION    = 10000;  // Steps per second per second
             constexpr uint16_t PID_UPDATE_FREQ = 1000;   // PID update frequency in Hz
         }  // namespace Motion
+
         namespace PID
         {
             constexpr float    KP           = 1.2f;   // 0.8f   // Proportional gain
@@ -128,6 +143,7 @@ namespace MotionSystem
             constexpr float    KD           = 0.08f;  // 0.05f  // Derivative gain
             constexpr uint16_t MAX_INTEGRAL = 1000;   // Anti-windup limit
         }  // namespace PID
+
         namespace Tasks
         {
             constexpr uint16_t PID_TASK_STACK_SIZE    = 4096;
@@ -140,6 +156,22 @@ namespace MotionSystem
             constexpr uint8_t  STATUS_TASK_PRIORITY   = 1;
             constexpr uint8_t  STATUS_TASK_CORE       = 0;
         }  // namespace Tasks
+
+        namespace CommandHandler
+        {
+            constexpr char CMD_FORWARD     = 'w';  // *
+            constexpr char CMD_REVERSE     = 's';  // *
+            constexpr char CMD_STOP        = 'x';  // *
+            constexpr char CMD_RESET       = 'z';
+            constexpr char CMD_TEST_SPI    = 't';  // *
+            constexpr char CMD_SHOW_STATUS = 'i';  // *
+            constexpr char CMD_SHOW_CONFIG = 'p';  // *
+            constexpr char CMD_SHOW_TEMP   = 'm';
+            constexpr char CMD_TOGGLE_MODE = 'n';
+            constexpr char CMD_HELP        = 'h';  // *
+            constexpr char CMD_HELP_ALT    = '?';  // *
+        }  // namespace CommandHandler
+
     }  // namespace Config
 }  // namespace MotionSystem
 

@@ -11,16 +11,14 @@
  */
 
 #include <Arduino.h>
-#include "CommandHandler.h"
 #include "Config.h"
-#include "Encoders/EncoderInstances.h"
-
-#include "LimitSwitch.h"
-#include "MotionController.h"
-#include "MotorControllers\SimpleController.h"
-#include "PIDController.h"
-#include "StatusReporter.h"
-#include "Types.h"
+#include "Globals.h"
+#include "Helper/CommandHandler.h"
+#include "Helper/StatusReporter.h"
+#include "Motion/LimitSwitch.h"
+#include "Motion/MotionController.h"
+#include "Motion/PIDController.h"
+#include "Motors/SimpleController.h"
 
 using namespace MotionSystem::Types;
 

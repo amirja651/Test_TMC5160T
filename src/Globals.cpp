@@ -1,5 +1,4 @@
-#include "Encoders\EncoderInstances.h"
-#include "MotorControllers\MotorInstances.h"
+#include "Globals.h"
 
 MotionSystem::TmcController motors[MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS] = {
     MotionSystem::TmcController(

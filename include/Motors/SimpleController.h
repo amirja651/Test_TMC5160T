@@ -2,7 +2,6 @@
 #define STEPPER_MOTOR_H
 
 #include "Config.h"
-#include "Types.h"
 
 namespace MotionSystem
 {

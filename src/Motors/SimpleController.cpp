@@ -1,4 +1,4 @@
-#include "MotorControllers\SimpleController.h"
+#include "Motors/SimpleController.h"
 
 namespace MotionSystem
 {

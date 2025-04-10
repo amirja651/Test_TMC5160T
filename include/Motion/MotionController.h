@@ -2,13 +2,12 @@
 #define MOTION_CONTROLLER_H
 
 #include "Config.h"
-#include "Encoders\EncoderInterface.h"
-#include "LimitSwitch.h"
-#include "MotorControllers\TmcController.h"
+#include "Encoders/EncoderInterface.h"
+#include "Helper/StatusReporter.h"
+#include "Helper/Utils.h"
+#include "Motion/LimitSwitch.h"
+#include "Motors/TmcController.h"
 #include "PIDController.h"
-#include "StatusReporter.h"
-#include "Types.h"
-#include "Utils.h"
 #include "esp_timer.h"
 
 const char errorMessage[] PROGMEM   = "ERROR: Position %.3f µm exceeds relative travel limits (±%.1f mm)";

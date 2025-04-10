@@ -2,11 +2,10 @@
 #define STATUS_REPORTER_H
 
 #include "Config.h"
-#include "Encoders\EncoderInterface.h"
-#include "LimitSwitch.h"
-#include "PIDController.h"
-#include "Types.h"
-#include "Utils.h"
+#include "Encoders/EncoderInterface.h"
+#include "Helper/Utils.h"
+#include "Motion/LimitSwitch.h"
+#include "Motion/PIDController.h"
 namespace MotionSystem
 {
     class StatusReporter

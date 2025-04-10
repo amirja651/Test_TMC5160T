@@ -1,4 +1,4 @@
-#include "MotorControllers\TmcController.h"
+#include "Motors/TmcController.h"
 
 MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin,
                                            uint8_t enPin, uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)

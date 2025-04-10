@@ -2,7 +2,6 @@
 #define UTILS_H
 
 #include "Config.h"
-#include "Types.h"
 
 namespace MotionSystem
 {
