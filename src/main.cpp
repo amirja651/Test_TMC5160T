@@ -16,6 +16,7 @@
 #include "Globals.h"
 
 #include "Helper/CommandHandler.h"
+#include "Helper/Logger.h"
 #include "Helper/StatusReporter.h"
 
 #include "Motion/MotionGlobals.h"
@@ -33,14 +34,11 @@ using namespace MotionSystem::Types;
 // MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
 // MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
 //                                                 &statusReporter);
-TaskHandle_t  serialTaskHandle       = NULL;
-TaskHandle_t  motorUpdateTaskHandle0 = NULL;
-TaskHandle_t  motorUpdateTaskHandle1 = NULL;
-TaskHandle_t  motorUpdateTaskHandle2 = NULL;
-TaskHandle_t  motorUpdateTaskHandle3 = NULL;
-QueueHandle_t commandQueue;
-
-#define COMMAND_BUFFER_SIZE 32
+TaskHandle_t serialTaskHandle       = NULL;
+TaskHandle_t motorUpdateTaskHandle0 = NULL;
+TaskHandle_t motorUpdateTaskHandle1 = NULL;
+TaskHandle_t motorUpdateTaskHandle2 = NULL;
+TaskHandle_t motorUpdateTaskHandle3 = NULL;
 
 void serialTask(void* pvParameters)
 {
@@ -52,7 +50,7 @@ void serialTask(void* pvParameters)
 
             if (command.length() > 10)
             {
-                Serial.println(F("❌ Invalid command. Use h/? for help"));
+                MotionSystem::Logger::getInstance().log(F("❌ Invalid command. Use h/? for help"));
                 continue;
             }
 
@@ -123,19 +121,15 @@ void setup()
         delay(10);
     }
 
-    Serial.println(F("\n ==================== Initializing High Precision Motion Control System ===================="));
+    // Initialize the logger
+    MotionSystem::Logger::getInstance().begin();
+
+    MotionSystem::Logger::getInstance().log(
+        F("\n ==================== Initializing High Precision Motion Control System ===================="));
 
     initializeMotors();
     initializePWMEncoders();
     initializeMotionSystem();
-
-    commandQueue = xQueueCreate(10, COMMAND_BUFFER_SIZE);
-    if (commandQueue == NULL)
-    {
-        Serial.println(F("Failed to create command queue ❌"));
-        while (1)
-            ;
-    }
 
     MotionSystem::CommandHandler::getInstance().printCommandGuide();
     xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);
@@ -154,11 +148,8 @@ void loop()
     /** MotionSystem::Types::EncoderPosition pwmPosition = pwmEncoders[0]->readPosition();
     MotionSystem::Types::MicronPosition       pwmMicrons  = pwmEncoders[0]->countsToMicrons(pwmPosition);
 
-    Serial.print(F("PWM Encoder Position: "));
-    Serial.print(pwmPosition);
-    Serial.print(F(" counts ("));
-    Serial.print(pwmMicrons, 2);
-    Serial.println(F(" μm)"));
+    MotionSystem::Logger::getInstance().logf(F("PWM Encoder Position: %ld counts (%.2f μm)"),
+        pwmPosition, pwmMicrons);
     **/
 
     delay(10);
