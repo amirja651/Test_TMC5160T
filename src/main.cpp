@@ -18,6 +18,8 @@
 #include "Helper/CommandHandler.h"
 #include "Helper/StatusReporter.h"
 
+#include "Motion/MotionGlobals.h"
+
 #include "Motion/LimitSwitch.h"
 #include "Motion/MotionController.h"
 #include "Motion/PIDController.h"
@@ -26,17 +28,17 @@
 using namespace MotionSystem::Types;
 
 // MotionSystem::SimpleController motor;
-MotionSystem::LimitSwitch      limitSwitch;
-MotionSystem::PIDController    pidController(pwmEncoders[0]);
-MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
-MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
-                                                &statusReporter);
-TaskHandle_t                   serialTaskHandle       = NULL;
-TaskHandle_t                   motorUpdateTaskHandle0 = NULL;
-TaskHandle_t                   motorUpdateTaskHandle1 = NULL;
-TaskHandle_t                   motorUpdateTaskHandle2 = NULL;
-TaskHandle_t                   motorUpdateTaskHandle3 = NULL;
-QueueHandle_t                  commandQueue;
+// MotionSystem::LimitSwitch      limitSwitch;
+//      MotionSystem::PIDController    pidController(pwmEncoders[0]);
+// MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
+// MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
+//                                                 &statusReporter);
+TaskHandle_t  serialTaskHandle       = NULL;
+TaskHandle_t  motorUpdateTaskHandle0 = NULL;
+TaskHandle_t  motorUpdateTaskHandle1 = NULL;
+TaskHandle_t  motorUpdateTaskHandle2 = NULL;
+TaskHandle_t  motorUpdateTaskHandle3 = NULL;
+QueueHandle_t commandQueue;
 
 #define COMMAND_BUFFER_SIZE 32
 
@@ -125,11 +127,8 @@ void setup()
 
     initializeMotors();
     initializePWMEncoders();
+    initializeMotionSystem();
 
-    motionController.begin();
-    pidController.startTask();
-    motionController.startTask();
-    statusReporter.startTask();
     commandQueue = xQueueCreate(10, COMMAND_BUFFER_SIZE);
     if (commandQueue == NULL)
     {

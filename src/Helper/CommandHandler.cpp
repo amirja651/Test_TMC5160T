@@ -1,7 +1,7 @@
 #include "Helper/CommandHandler.h"
 #include "Globals.h"
 #include "Helper/Utils.h"
-
+#include "Motion/MotionGlobals.h"
 namespace MotionSystem
 {
     const String CommandKey::CMD_MOVE        = "MOV";
@@ -130,8 +130,7 @@ namespace MotionSystem
                     Serial.print(F("Motor "));
                     Serial.print(motorNum);
                     Serial.println(F(" moving"));
-                    // motors[motorNum - 1].move();
-                    // MotionController::getInstance().moveToPosition(position);
+                    // motionController.moveToPosition(position);
 
                     break;
                 case CommandType::MOTOR_FORWARD:
