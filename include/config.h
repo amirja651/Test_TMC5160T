@@ -157,21 +157,6 @@ namespace MotionSystem
             constexpr uint8_t  STATUS_TASK_CORE       = 0;
         }  // namespace Tasks
 
-        namespace CommandHandler
-        {
-            constexpr char CMD_FORWARD     = 'w';  // *
-            constexpr char CMD_REVERSE     = 's';  // *
-            constexpr char CMD_STOP        = 'x';  // *
-            constexpr char CMD_RESET       = 'z';
-            constexpr char CMD_TEST_SPI    = 't';  // *
-            constexpr char CMD_SHOW_STATUS = 'i';  // *
-            constexpr char CMD_SHOW_CONFIG = 'p';  // *
-            constexpr char CMD_SHOW_TEMP   = 'm';
-            constexpr char CMD_TOGGLE_MODE = 'n';
-            constexpr char CMD_HELP        = 'h';  // *
-            constexpr char CMD_HELP_ALT    = '?';  // *
-        }  // namespace CommandHandler
-
     }  // namespace Config
 }  // namespace MotionSystem
 

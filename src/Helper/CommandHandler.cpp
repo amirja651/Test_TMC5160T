@@ -1,207 +1,258 @@
 #include "Helper/CommandHandler.h"
 #include "Globals.h"
+#include "Helper/Utils.h"
 
-MotionSystem::CommandHandler* MotionSystem::CommandHandler::instance = nullptr;
-
-const MotionSystem::Command MotionSystem::CommandHandler::commands[] = {
-    {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, MotionSystem::Config::CommandHandler::CMD_FORWARD,
-     true},
-    {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, MotionSystem::Config::CommandHandler::CMD_REVERSE,
-     true},
-    {"Stop", "Stop motor", CommandType::MOTOR_STOP, MotionSystem::Config::CommandHandler::CMD_STOP, true},
-    {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST,
-     MotionSystem::Config::CommandHandler::CMD_TEST_SPI, true},
-    {"Info", "Show system information", CommandType::DRIVER_STATUS,
-     MotionSystem::Config::CommandHandler::CMD_SHOW_STATUS, true},
-    {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG,
-     MotionSystem::Config::CommandHandler::CMD_SHOW_CONFIG, true},
-    {"Temp", "Show temperature", CommandType::TEMPERATURE, MotionSystem::Config::CommandHandler::CMD_SHOW_TEMP, true},
-    {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, MotionSystem::Config::CommandHandler::CMD_TOGGLE_MODE, true},
-    {"Reset", "Reset driver", CommandType::DRIVER_RESET, MotionSystem::Config::CommandHandler::CMD_RESET, true},
-    {"Help", "Show command guide", CommandType::HELP, MotionSystem::Config::CommandHandler::CMD_HELP, false},
-    {"?", "Show command guide", CommandType::HELP, MotionSystem::Config::CommandHandler::CMD_HELP_ALT, false}};
-
-const size_t MotionSystem::CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
-
-MotionSystem::CommandHandler& MotionSystem::CommandHandler::getInstance()
+namespace MotionSystem
 {
-    if (!instance)
+    const String CommandKey::CMD_MOVE        = "MOV";
+    const String CommandKey::CMD_FORWARD     = "FWD";
+    const String CommandKey::CMD_REVERSE     = "REV";
+    const String CommandKey::CMD_STOP        = "STP";
+    const String CommandKey::CMD_RESET       = "RST";
+    const String CommandKey::CMD_TEST_SPI    = "TST";
+    const String CommandKey::CMD_SHOW_STATUS = "STA";
+    const String CommandKey::CMD_SHOW_CONFIG = "CFG";
+    const String CommandKey::CMD_TOGGLE_MODE = "MOD";
+    const String CommandKey::CMD_HELP        = "HLP";
+    const String CommandKey::CMD_HELP_ALT    = "?";
+
+    const Command CommandHandler::commands[] = {
+        {"Move", "Move motor", CommandType::MOTOR_FORWARD, CommandKey::CMD_MOVE},
+        {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, CommandKey::CMD_FORWARD},
+        {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, CommandKey::CMD_REVERSE},
+        {"Stop", "Stop motor", CommandType::MOTOR_STOP, CommandKey::CMD_STOP},
+        {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST, CommandKey::CMD_TEST_SPI},
+        {"Info", "Show system information", CommandType::DRIVER_STATUS, CommandKey::CMD_SHOW_STATUS},
+        {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG, CommandKey::CMD_SHOW_CONFIG},
+        {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, CommandKey::CMD_TOGGLE_MODE},
+        {"Reset", "Reset driver", CommandType::DRIVER_RESET, CommandKey::CMD_RESET},
+        {"Help", "Show command guide", CommandType::HELP, CommandKey::CMD_HELP},
+        {"?", "Show command guide", CommandType::HELP, CommandKey::CMD_HELP_ALT}};
+
+    const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
+
+    CommandHandler* CommandHandler::instance = nullptr;
+
+    CommandHandler& CommandHandler::getInstance()
     {
-        instance = new CommandHandler();
+        if (!instance)
+        {
+            instance = new CommandHandler();
+        }
+
+        return *instance;
     }
 
-    return *instance;
-}
+    CommandHandler::CommandHandler() {}
 
-MotionSystem::CommandHandler::CommandHandler() {}
-
-void MotionSystem::CommandHandler::printCommandGuide()
-{
-    Serial.println("\n ==================== Available Commands ====================");
-    Serial.println("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
-    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    void CommandHandler::printCommandGuide()
     {
-        if (commands[i].requiresMotorNumber)
+        Serial.println("\n ==================== Available Commands ====================");
+        Serial.println("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
+        for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
             Serial.print("  motor x ");
             Serial.print(commands[i].key);
             Serial.print(" - ");
             Serial.println(commands[i].description);
         }
-    }
 
-    Serial.println("\nSystem Commands:");
-    for (size_t i = 0; i < NUM_COMMANDS; i++)
-    {
-        if (!commands[i].requiresMotorNumber)
+        Serial.println("\nSystem Commands:");
+        for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
             Serial.print("  ");
             Serial.print(commands[i].key);
             Serial.print(" - ");
             Serial.println(commands[i].description);
         }
+
+        Serial.println("\n ==================== End of Command Guide ====================\n> ");
     }
 
-    Serial.println("\n ==================== End of Command Guide ====================\n> ");
-}
-
-const MotionSystem::Command* MotionSystem::CommandHandler::findCommand(const char* input) const
-{
-    for (size_t i = 0; i < NUM_COMMANDS; i++)
+    const Command* CommandHandler::findCommand(String cmd) const
     {
-        if (input[0] == commands[i].key)
+        for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
-            return &commands[i];
+            if (cmd.equalsIgnoreCase(commands[i].key))
+            {
+                return &commands[i];
+            }
+        }
+
+        return nullptr;
+    }
+
+    bool CommandHandler::validateMotorNumber(int motorNum) const
+    {
+        return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
+    }
+
+    void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
+    {
+        if (motors[motorNum - 1].testCommunication(false))
+        {
+            switch (type)
+            {
+                case CommandType::MOTOR_MOVE:
+                    Serial.print(F("Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(" moving"));
+                    // motors[motorNum - 1].move();
+                    break;
+                case CommandType::MOTOR_FORWARD:
+                    Serial.print(F("Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(" moving forward"));
+                    motors[motorNum - 1].moveForward();
+                    break;
+                case CommandType::MOTOR_REVERSE:
+                    Serial.print(F("Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(" moving reverse"));
+                    motors[motorNum - 1].moveReverse();
+                    break;
+                case CommandType::MOTOR_STOP:
+                    Serial.print(F("Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(" stopped"));
+                    motors[motorNum - 1].stop();
+                    break;
+                case CommandType::DRIVER_RESET:
+                    Serial.print(F("Resetting driver for Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(": "));
+                    motors[motorNum - 1].resetDriverState();
+                    break;
+                case CommandType::DRIVER_SPI_TEST:
+                    Serial.print(F("\nMotor "));
+                    Serial.print(motorNum);
+                    Serial.print(F(" - "));
+                    motors[motorNum - 1].testCommunication();
+                    break;
+                case CommandType::DRIVER_STATUS:
+                    Serial.print(F("\nDriver Status for Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(": "));
+                    motors[motorNum - 1].printDriverStatus();
+                    break;
+                case CommandType::DRIVER_CONFIG:
+                    Serial.print(F("\nDriver Configuration for Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(": "));
+                    motors[motorNum - 1].printDriverConfig();
+                    break;
+                case CommandType::TEMPERATURE:
+                    Serial.print(F("\nTemperature for Motor "));
+                    Serial.print(motorNum);
+                    Serial.print(F(": "));
+                    motors[motorNum - 1].printTemperature();
+                    break;
+                case CommandType::MODE_TOGGLE:
+                    Serial.print(F("\nToggling mode for Motor "));
+                    Serial.print(motorNum);
+                    Serial.println(F(": "));
+                    motors[motorNum - 1].toggleStealthChop();
+                    break;
+                case CommandType::HELP:
+                    printCommandGuide();
+                    break;
+                default:
+                    Serial.println(F("Invalid command type ❌ "));
+                    break;
+            }
+        }
+
+        else
+        {
+            Serial.print(F("\nMotor "));
+            Serial.print(motorNum);
+            Serial.println(F(" communication failed ❌ "));
         }
     }
 
-    return nullptr;
-}
-
-bool MotionSystem::CommandHandler::validateMotorNumber(int motorNum) const
-{
-    return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
-}
-
-void MotionSystem::CommandHandler::executeMotorCommand(int motorNum, CommandType type)
-{
-    if (motors[motorNum - 1].testCommunication(false))
+    bool CommandHandler::isValidMotorCommand(String cmd) const
     {
-        switch (type)
+        for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
-            case CommandType::MOTOR_FORWARD:
-                Serial.print(F("Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(" moving forward"));
-                motors[motorNum - 1].moveForward();
-                break;
-            case CommandType::MOTOR_REVERSE:
-                Serial.print(F("Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(" moving reverse"));
-                motors[motorNum - 1].moveReverse();
-                break;
-            case CommandType::MOTOR_STOP:
-                Serial.print(F("Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(" stopped"));
-                motors[motorNum - 1].stop();
-                break;
-            case CommandType::DRIVER_RESET:
-                Serial.print(F("Resetting driver for Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(": "));
-                motors[motorNum - 1].resetDriverState();
-                break;
-            case CommandType::DRIVER_SPI_TEST:
-                Serial.print(F("\nMotor "));
-                Serial.print(motorNum);
-                Serial.print(F(" - "));
-                motors[motorNum - 1].testCommunication();
-                break;
-            case CommandType::DRIVER_STATUS:
-                Serial.print(F("\nDriver Status for Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(": "));
-                motors[motorNum - 1].printDriverStatus();
-                break;
-            case CommandType::DRIVER_CONFIG:
-                Serial.print(F("\nDriver Configuration for Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(": "));
-                motors[motorNum - 1].printDriverConfig();
-                break;
-            case CommandType::TEMPERATURE:
-                Serial.print(F("\nTemperature for Motor "));
-                Serial.print(motorNum);
-                Serial.print(F(": "));
-                motors[motorNum - 1].printTemperature();
-                break;
-            case CommandType::MODE_TOGGLE:
-                Serial.print(F("\nToggling mode for Motor "));
-                Serial.print(motorNum);
-                Serial.println(F(": "));
-                motors[motorNum - 1].toggleStealthChop();
-                break;
-            case CommandType::HELP:
+            if (cmd.equalsIgnoreCase(commands[i].key))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void CommandHandler::processCommand(String cmd)
+    {
+        int            spaceIndex1 = cmd.indexOf(" ");
+        int            spaceIndex2 = cmd.indexOf(" ", spaceIndex1 + 1);
+        String         firstWord   = cmd.substring(0, spaceIndex1);
+        String         secondWord  = (spaceIndex1 != -1) ? cmd.substring(spaceIndex1 + 1, spaceIndex2) : "";
+        String         thirdWord   = (spaceIndex2 != -1) ? cmd.substring(spaceIndex2 + 1) : "";
+        const Command* command     = findCommand(firstWord);
+
+        if (secondWord == "" && thirdWord == "")
+        {
+            if (!command)
+            {
+                Serial.println(F("❌ Invalid command ["));
+                Serial.print(cmd);
+                Serial.println(F("]. Use h/? for help"));
+                return;
+            }
+
+            if (command->type == CommandType::HELP)
+            {
                 printCommandGuide();
-                break;
-            default:
-                Serial.println(F("Invalid command type ❌ "));
-                break;
+            }
         }
-    }
 
-    else
-    {
-        Serial.print(F("\nMotor "));
-        Serial.print(motorNum);
-        Serial.println(F(" communication failed ❌ "));
-    }
-}
-
-bool MotionSystem::CommandHandler::isValidMotorCommand(char cmd) const
-{
-    for (size_t i = 0; i < NUM_COMMANDS; i++)
-    {
-        if (commands[i].requiresMotorNumber && commands[i].key == cmd)
+        else if (secondWord != "" && thirdWord == "")
         {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void MotionSystem::CommandHandler::processCommand(char cmd, int motorNum)
-{
-    const Command* command = findCommand(&cmd);
-    if (!command)
-    {
-        Serial.println(F("Invalid command ❌"));
-        return;
-    }
-
-    if (command->requiresMotorNumber)
-    {
-        if (!validateMotorNumber(motorNum))
-        {
-            Serial.print(F("Invalid motor number (1-"));
-            Serial.print(Config::TMC5160T_Driver::NUM_MOTORS);
-            Serial.println(F(") ❌"));
+            Serial.println(F("❌ Invalid command ["));
+            Serial.print(cmd);
+            Serial.println(F("]. Use h/? for help"));
             return;
         }
 
-        executeMotorCommand(motorNum, command->type);
-    }
-
-    else
-    {
-        if (command->type == CommandType::DRIVER_STATUS)
+        else if (secondWord != "" && thirdWord != "")
         {
-            Serial.println(F("System Information:"));
-            Serial.print(F("Number of motors: "));
-            Serial.println(Config::TMC5160T_Driver::NUM_MOTORS);
+            if (Utils::getInstance().isNumber(secondWord))
+            {
+                if (thirdWord.length() == 2 && thirdWord.charAt(0) == 'm' && isDigit(thirdWord.charAt(1)))
+                {
+                    int motorNum = thirdWord.charAt(1) - '0';
+
+                    if (!validateMotorNumber(motorNum))
+                    {
+                        Serial.print(F(" ❌ Invalid motor number: "));
+                        Serial.print(motorNum);
+                        return;
+                    }
+
+                    executeMotorCommand(motorNum, command->type);
+                }
+                else
+                {
+                    Serial.println(F("❌ Invalid command ["));
+                    Serial.print(cmd);
+                    Serial.println(F("]. Use h/? for help"));
+                    return;
+                }
+            }
+            else
+            {
+                Serial.println(F("❌ Invalid command ["));
+                Serial.print(cmd);
+                Serial.println(F("]. Use h/? for help"));
+                return;
+            }
+        }
+
+        else
+        {
+            Serial.println("Invalid command.");
         }
     }
-}
+}  // namespace MotionSystem

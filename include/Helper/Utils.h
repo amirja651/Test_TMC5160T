@@ -12,6 +12,7 @@ namespace MotionSystem
         Types::MicronPosition  countsToMicrons(Types::EncoderPosition counts);
         Types::EncoderPosition micronsToEncCounts(Types::MicronPosition microns);
         Types::PixelPosition   countsToPixels(Types::EncoderPosition counts);
+        bool                   isNumber(const String& str);
 
     private:
         Utils();

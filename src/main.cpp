@@ -11,10 +11,13 @@
  */
 
 #include <Arduino.h>
+
 #include "Config.h"
 #include "Globals.h"
+
 #include "Helper/CommandHandler.h"
 #include "Helper/StatusReporter.h"
+
 #include "Motion/LimitSwitch.h"
 #include "Motion/MotionController.h"
 #include "Motion/PIDController.h"
@@ -29,7 +32,6 @@ MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limi
 MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
                                                 &statusReporter);
 TaskHandle_t                   serialTaskHandle       = NULL;
-TaskHandle_t                   commandTaskHandle      = NULL;
 TaskHandle_t                   motorUpdateTaskHandle0 = NULL;
 TaskHandle_t                   motorUpdateTaskHandle1 = NULL;
 TaskHandle_t                   motorUpdateTaskHandle2 = NULL;
@@ -40,93 +42,22 @@ QueueHandle_t                  commandQueue;
 
 void serialTask(void* pvParameters)
 {
-    char    inputBuffer[COMMAND_BUFFER_SIZE];
-    uint8_t bufferIndex = 0;
     while (1)
     {
         if (Serial.available() > 0)
         {
-            char c = Serial.read();
-            if (c == '\n' || c == '\r')
+            String command = Serial.readStringUntil('\n');
+
+            if (command.length() > 10)
             {
-                if (bufferIndex > 0)
-                {
-                    inputBuffer[bufferIndex] = '\0';
-                    if (strcmp(inputBuffer, "h") == 0 || strcmp(inputBuffer, "?") == 0)
-                    {
-                        MotionSystem::CommandHandler::getInstance().printCommandGuide();
-                        bufferIndex = 0;
-                        continue;
-                    }
-
-                    if (strncmp(inputBuffer, "m ", 2) == 0)
-                    {
-                        if (strlen(inputBuffer) < 5)  // Changed from 9 to 5 (m 1 w = 5 chars)
-                        {
-                            Serial.println(F("❌ Invalid command. Use h/? for help"));
-                            bufferIndex = 0;
-                            continue;
-                        }
-
-                        int  motorNum = inputBuffer[2] - '0';
-                        char cmd      = inputBuffer[4];
-                        if (motorNum < 1 || motorNum > MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS)
-                        {
-                            Serial.print(F("❌ Invalid motor number (1-"));
-                            Serial.print(MotionSystem::Config::TMC5160T_Driver::NUM_MOTORS);
-                            Serial.println(F(")"));
-                            bufferIndex = 0;
-                            continue;
-                        }
-
-                        if (!MotionSystem::CommandHandler::getInstance().isValidMotorCommand(cmd))
-                        {
-                            Serial.println(F("❌ Invalid command. Use h/? for help"));
-                            bufferIndex = 0;
-                            continue;
-                        }
-                    }
-
-                    if (xQueueSend(commandQueue, inputBuffer, portMAX_DELAY) != pdPASS)
-                    {
-                        Serial.println(F("❌ Failed to send command to queue"));
-                    }
-
-                    bufferIndex = 0;
-                }
+                Serial.println(F("❌ Invalid command. Use h/? for help"));
+                continue;
             }
 
-            else if (bufferIndex < COMMAND_BUFFER_SIZE - 1)
-            {
-                inputBuffer[bufferIndex++] = c;
-            }
-        }
+            command.trim();
+            command.toUpperCase();
 
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
-
-void commandTask(void* pvParameters)
-{
-    char inputBuffer[COMMAND_BUFFER_SIZE];
-    while (1)
-    {
-        if (xQueueReceive(commandQueue, inputBuffer, portMAX_DELAY) == pdPASS)
-        {
-            Serial.print(F("Command received: "));
-            Serial.println(inputBuffer);
-            Serial.println();
-            if (strncmp(inputBuffer, "m ", 2) == 0)
-            {
-                int  motorNum = inputBuffer[2] - '0';
-                char cmd      = inputBuffer[4];
-                MotionSystem::CommandHandler::getInstance().processCommand(cmd, motorNum);
-            }
-
-            else
-            {
-                Serial.println(F("❌ Invalid command format. Enter h/? for help"));
-            }
+            MotionSystem::CommandHandler::getInstance().processCommand(command);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -209,7 +140,6 @@ void setup()
 
     MotionSystem::CommandHandler::getInstance().printCommandGuide();
     xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);
-    xTaskCreate(commandTask, "CommandTask", 4096, NULL, 2, &commandTaskHandle);
     xTaskCreate(motorUpdateTask0, "MotorUpdateTask0", 4096, NULL, 3, &motorUpdateTaskHandle0);
     xTaskCreate(motorUpdateTask1, "MotorUpdateTask1", 4096, NULL, 3, &motorUpdateTaskHandle1);
     xTaskCreate(motorUpdateTask2, "MotorUpdateTask2", 4096, NULL, 3, &motorUpdateTaskHandle2);
