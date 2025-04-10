@@ -1,9 +1,8 @@
 #include "MotionController.h"
-#include "esp_timer.h"
 
 namespace MotionSystem
 {
-    MotionController::MotionController(EncoderInterface* encoder, SimpleController* motor, PIDController* pidController,
+    MotionController::MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
                                        LimitSwitch* limitSwitch, StatusReporter* statusReporter)
         : encoder(encoder),
           motor(motor),
@@ -25,7 +24,7 @@ namespace MotionSystem
         }
     }
 
-    void MotionController::init()
+    void MotionController::begin()
     {
         encoder->begin();
         motor->begin();
@@ -39,39 +38,20 @@ namespace MotionSystem
         Serial.println(F("Motion controller initialized"));
     }
 
-    void MotionController::moveToPosition(Types::MicronPosition positionMicrons, bool calibration)
+    void MotionController::moveToPosition(Types::MicronPosition positionMicrons)
     {
-        if (!calibration && (positionMicrons < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
-                             positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS))
+        if (positionMicrons < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
+            positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS)
         {
             snprintf_P(buffer, sizeof(buffer), errorMessage, positionMicrons, Config::System::REL_TRAVEL_LIMIT_MM);
             Serial.println(buffer);
             return;
         }
 
-        Types::EncoderPosition targetPosition =
-            statusReporter->getRelativeZeroPosition() + encoder->micronsToEncCounts(positionMicrons);
+        Types::EncoderPosition targetPosition = statusReporter->getRelativeZeroPosition() +
+                                                MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
-        Serial.println(buffer);
-    }
-
-    void MotionController::moveToPositionPixels(Types::PixelPosition positionPixels)
-    {
-        Types::MicronPosition positionMicrons = pixelsToMicrons(positionPixels);
-        if (positionMicrons < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
-            positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS)
-        {
-            snprintf_P(buffer, sizeof(buffer), errorMessage2, positionPixels, positionMicrons,
-                       Config::System::REL_TRAVEL_LIMIT_MM);
-            Serial.println(buffer);
-            return;
-        }
-
-        Types::EncoderPosition targetPosition =
-            statusReporter->getRelativeZeroPosition() + encoder->micronsToEncCounts(positionMicrons);
-        pidController->setTargetPosition(targetPosition);
-        snprintf_P(buffer, sizeof(buffer), movingMessage2, positionPixels, positionMicrons, targetPosition);
         Serial.println(buffer);
     }
 
@@ -88,37 +68,19 @@ namespace MotionSystem
         }
 
         Types::EncoderPosition currentPosition = encoder->readPosition();
-        Types::EncoderPosition targetPosition  = currentPosition + encoder->micronsToEncCounts(distanceMicrons);
+        Types::EncoderPosition targetPosition =
+            currentPosition + MotionSystem::Utils::getInstance().micronsToEncCounts(distanceMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons,
                    distanceMicrons / Config::System::PIXEL_SIZE, targetPosition);
         Serial.println(buffer);
     }
 
-    void MotionController::moveRelativePixels(Types::PixelPosition distancePixels)
-    {
-        Types::MicronPosition distanceMicrons = pixelsToMicrons(distancePixels);
-        Types::MicronPosition currentRelPos   = statusReporter->getRelativePosition();
-        Types::MicronPosition newRelPos       = currentRelPos + distanceMicrons;
-        if (newRelPos < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
-            newRelPos > Config::System::REL_TRAVEL_LIMIT_MICRONS)
-        {
-            snprintf_P(buffer, sizeof(buffer), errorMessage4, newRelPos, Config::System::REL_TRAVEL_LIMIT_MM);
-            Serial.println(buffer);
-            return;
-        }
-
-        Types::EncoderPosition currentPosition = encoder->readPosition();
-        Types::EncoderPosition targetPosition  = currentPosition + encoder->micronsToEncCounts(distanceMicrons);
-        pidController->setTargetPosition(targetPosition);
-        snprintf_P(buffer, sizeof(buffer), movingMessage4, distancePixels, distanceMicrons, targetPosition);
-        Serial.println(buffer);
-    }
-
     bool MotionController::waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs)
     {
-        Types::EncoderPosition toleranceCounts = encoder->micronsToEncCounts(toleranceMicrons);
-        uint32_t               startTime       = millis();
+        Types::EncoderPosition toleranceCounts =
+            MotionSystem::Utils::getInstance().micronsToEncCounts(toleranceMicrons);
+        uint32_t startTime = millis();
         while (millis() - startTime < timeoutMs)
         {
             Types::EncoderPosition currentPosition = encoder->readPosition();
@@ -134,59 +96,11 @@ namespace MotionSystem
         return false;  // Timeout occurred
     }
 
-    void MotionController::calibrateSystem()
-    {
-        Serial.println(F("Starting system calibration..."));
-        limitSwitch->reset();
-        if (limitSwitch->isTriggered())
-        {
-            Serial.println(F("Limit switch already triggered. Moving away..."));
-            moveRelative(100);  // Move 100 microns away
-            waitForMotionComplete(0.1, 5000);
-            if (limitSwitch->isTriggered())
-            {
-                Serial.println(F("Error: Could not move away from limit switch!"));
-                return;
-            }
-        }
-
-        Serial.println(F("Finding minimum position (home)..."));
-        moveToPosition(-99999, true);  // Move to a large negative value, bypassing limit checks
-        unsigned long startTime = millis();
-        while (!limitSwitch->isTriggered() && (millis() - startTime < 30000))
-        {
-            delay(10);
-        }
-
-        if (!limitSwitch->isTriggered())
-        {
-            Serial.println(F("Calibration failed: Limit switch not triggered!"));
-            return;
-        }
-
-        currentSpeed = 0;
-        delay(500);  // Allow system to settle
-        Serial.println(F("Moving away from limit switch..."));
-        moveRelative(50);  // Move 50 microns away
-        waitForMotionComplete(0.1, 5000);
-        Types::EncoderPosition position = encoder->readPosition();
-        statusReporter->setAbsoluteZeroPosition(position);
-        statusReporter->setRelativeZeroPosition(position);
-        pidController->setTargetPosition(position);
-        limitSwitch->reset();
-        Serial.println(F("System calibrated. Absolute zero set at current position."));
-    }
-
     void MotionController::resetRelativeZero()
     {
         Types::EncoderPosition currentPosition = encoder->readPosition();
         statusReporter->setRelativeZeroPosition(currentPosition);
         Serial.println(F("Relative zero position reset at current position"));
-    }
-
-    Types::MicronPosition MotionController::pixelsToMicrons(Types::PixelPosition pixels)
-    {
-        return pixels * Config::System::PIXEL_SIZE;
     }
 
     void MotionController::processCommands()
@@ -202,27 +116,10 @@ namespace MotionSystem
                 moveToPosition(position);
             }
 
-            else if (command.startsWith("MOVEPX "))
-            {
-                float positionPixels = command.substring(7).toFloat();
-                moveToPositionPixels(positionPixels);
-            }
-
             else if (command.startsWith("REL "))
             {
                 float distance = command.substring(4).toFloat();
                 moveRelative(distance);
-            }
-
-            else if (command.startsWith("RELPX "))
-            {
-                float distancePixels = command.substring(6).toFloat();
-                moveRelativePixels(distancePixels);
-            }
-
-            else if (command == "HOME")
-            {
-                calibrateSystem();
             }
 
             else if (command == "STATUS")

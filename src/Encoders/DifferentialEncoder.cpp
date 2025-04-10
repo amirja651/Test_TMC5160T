@@ -61,21 +61,6 @@ namespace MotionSystem
         return position;
     }
 
-    Types::MicronPosition DifferentialEncoder::countsToMicrons(Types::EncoderPosition counts)
-    {
-        return static_cast<Types::MicronPosition>(counts) * config.micronsPerCount;
-    }
-
-    Types::EncoderPosition DifferentialEncoder::micronsToEncCounts(Types::MicronPosition microns)
-    {
-        return static_cast<Types::EncoderPosition>(microns / config.micronsPerCount);
-    }
-
-    Types::PixelPosition DifferentialEncoder::countsToPixels(Types::EncoderPosition counts)
-    {
-        return static_cast<Types::PixelPosition>(countsToMicrons(counts) / 5.2f);  // 5.2μm per pixel
-    }
-
     void IRAM_ATTR DifferentialEncoder::encoderOverflowISR(void* arg)
     {
         DifferentialEncoder* encoder = static_cast<DifferentialEncoder*>(arg);

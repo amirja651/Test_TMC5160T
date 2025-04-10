@@ -801,3 +801,21 @@ void MotionSystem::TmcController::printDriverState(uint32_t status)
     Serial.print(F("  Position Reached: "));
     Serial.println((status & 0x00001000) ? F("Yes") : F("No"));
 }
+
+uint32_t MotionSystem::TmcController::calculateStepInterval(Types::Speed speed)
+{
+    if (abs(speed) < 1)
+        return 0;                 // Prevent division by zero
+    return 1000000 / abs(speed);  // Convert Hz to microseconds
+}
+
+MotionSystem::Types::StepPosition MotionSystem::TmcController::micronsToSteps(
+    MotionSystem::Types::MicronPosition microns)
+{
+    return roundf(microns * Config::System::MOTOR_STEPS_PER_MICRON);
+}
+
+MotionSystem::Types::StepPosition MotionSystem::TmcController::pixelsToSteps(MotionSystem::Types::PixelPosition pixels)
+{
+    return micronsToSteps(pixels * Config::System::PIXEL_SIZE);
+}

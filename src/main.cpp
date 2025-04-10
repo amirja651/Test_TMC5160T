@@ -24,11 +24,12 @@
 
 using namespace MotionSystem::Types;
 
-MotionSystem::SimpleController motor;
+// MotionSystem::SimpleController motor;
 MotionSystem::LimitSwitch      limitSwitch;
 MotionSystem::PIDController    pidController(pwmEncoders[0]);
 MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
-MotionSystem::MotionController motionController(diffEncoder, &motor, &pidController, &limitSwitch, &statusReporter);
+MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
+                                                &statusReporter);
 TaskHandle_t                   serialTaskHandle       = NULL;
 TaskHandle_t                   commandTaskHandle      = NULL;
 TaskHandle_t                   motorUpdateTaskHandle0 = NULL;
@@ -196,7 +197,7 @@ void setup()
     initializeMotors();
     initializePWMEncoders();
 
-    motionController.init();
+    motionController.begin();
     pidController.startTask();
     motionController.startTask();
     statusReporter.startTask();
@@ -220,17 +221,18 @@ void setup()
 
 void loop()
 {
-    motionController.processCommands();
+    // motionController.processCommands();
 
     // Read and display PWM encoder position
-    MotionSystem::Types::EncoderPosition pwmPosition = pwmEncoders[0]->readPosition();
-    MotionSystem::Types::MicronPosition  pwmMicrons  = pwmEncoders[0]->countsToMicrons(pwmPosition);
+    /** MotionSystem::Types::EncoderPosition pwmPosition = pwmEncoders[0]->readPosition();
+    MotionSystem::Types::MicronPosition       pwmMicrons  = pwmEncoders[0]->countsToMicrons(pwmPosition);
 
     Serial.print(F("PWM Encoder Position: "));
     Serial.print(pwmPosition);
     Serial.print(F(" counts ("));
     Serial.print(pwmMicrons, 2);
     Serial.println(F(" μm)"));
+    **/
 
     delay(10);
 }

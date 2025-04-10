@@ -46,21 +46,6 @@ namespace MotionSystem
         return position;
     }
 
-    Types::MicronPosition PWMEncoder::countsToMicrons(Types::EncoderPosition counts)
-    {
-        return static_cast<Types::MicronPosition>(counts) * config.micronsPerCount;
-    }
-
-    Types::EncoderPosition PWMEncoder::micronsToEncCounts(Types::MicronPosition microns)
-    {
-        return static_cast<Types::EncoderPosition>(microns / config.micronsPerCount);
-    }
-
-    Types::PixelPosition PWMEncoder::countsToPixels(Types::EncoderPosition counts)
-    {
-        return static_cast<Types::PixelPosition>(countsToMicrons(counts) / 5.2f);  // 5.2μm per pixel
-    }
-
     void IRAM_ATTR PWMEncoder::handleInterrupt(void* arg)
     {
         PWMEncoder*   encoder     = static_cast<PWMEncoder*>(arg);

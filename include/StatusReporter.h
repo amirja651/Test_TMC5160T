@@ -6,7 +6,7 @@
 #include "LimitSwitch.h"
 #include "PIDController.h"
 #include "Types.h"
-
+#include "Utils.h"
 namespace MotionSystem
 {
     class StatusReporter

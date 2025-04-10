@@ -26,8 +26,8 @@ namespace MotionSystem
     {
         Types::MicronPosition relPosition = getRelativePosition();
         Types::MicronPosition absPosition = getAbsolutePosition();
-        Types::MicronPosition relTarget =
-            encoder->countsToMicrons(pidController->getTargetPosition() - relativeZeroPosition);
+        Types::MicronPosition relTarget   = MotionSystem::Utils::getInstance().countsToMicrons(
+            pidController->getTargetPosition() - relativeZeroPosition);
         float error            = relTarget - relPosition;
         float motorFrequency   = abs(currentSpeed);  // Steps per second
         float relTravelPercent = (relPosition / Config::System::REL_TRAVEL_LIMIT_MICRONS) * 100;
@@ -63,13 +63,13 @@ namespace MotionSystem
     Types::MicronPosition StatusReporter::getAbsolutePosition()
     {
         Types::EncoderPosition currentPosition = encoder->readPosition();
-        return encoder->countsToMicrons(currentPosition - absoluteZeroPosition);
+        return MotionSystem::Utils::getInstance().countsToMicrons(currentPosition - absoluteZeroPosition);
     }
 
     Types::MicronPosition StatusReporter::getRelativePosition()
     {
         Types::EncoderPosition currentPosition = encoder->readPosition();
-        return encoder->countsToMicrons(currentPosition - relativeZeroPosition);
+        return MotionSystem::Utils::getInstance().countsToMicrons(currentPosition - relativeZeroPosition);
     }
 
     Types::EncoderPosition StatusReporter::getRelativeZeroPosition() const
@@ -85,7 +85,7 @@ namespace MotionSystem
         while (true)
         {
             Types::MicronPosition relPosition = reporter->getRelativePosition();
-            Types::MicronPosition relTarget   = reporter->encoder->countsToMicrons(
+            Types::MicronPosition relTarget   = MotionSystem::Utils::getInstance().countsToMicrons(
                 reporter->pidController->getTargetPosition() - reporter->relativeZeroPosition);
             if (abs(relPosition - relTarget) > 0.2)
             {

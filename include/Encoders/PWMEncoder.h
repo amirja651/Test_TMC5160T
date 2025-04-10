@@ -18,9 +18,6 @@ namespace MotionSystem
         void                   begin() override;
         void                   resetPosition() override;
         Types::EncoderPosition readPosition() override;
-        Types::MicronPosition  countsToMicrons(Types::EncoderPosition counts) override;
-        Types::EncoderPosition micronsToEncCounts(Types::MicronPosition microns) override;
-        Types::PixelPosition   countsToPixels(Types::EncoderPosition counts) override;
 
     private:
         static void IRAM_ATTR handleInterrupt(void* arg);

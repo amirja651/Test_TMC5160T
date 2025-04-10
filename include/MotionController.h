@@ -4,10 +4,12 @@
 #include "Config.h"
 #include "Encoders\EncoderInterface.h"
 #include "LimitSwitch.h"
-#include "MotorControllers\SimpleController.h"
+#include "MotorControllers\TmcController.h"
 #include "PIDController.h"
 #include "StatusReporter.h"
 #include "Types.h"
+#include "Utils.h"
+#include "esp_timer.h"
 
 const char errorMessage[] PROGMEM   = "ERROR: Position %.3f µm exceeds relative travel limits (±%.1f mm)";
 const char errorMessage2[] PROGMEM  = "ERROR: Position %.3f px (%.3f µm) exceeds relative travel limits (±%.1f mm)";
@@ -22,15 +24,12 @@ namespace MotionSystem
     class MotionController
     {
     public:
-        MotionController(EncoderInterface* encoder, SimpleController* motor, PIDController* pidController,
+        MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
                          LimitSwitch* limitSwitch, StatusReporter* statusReporter);
         ~MotionController();
-        void         init();
-        void         moveToPosition(Types::MicronPosition positionMicrons, bool calibration = false);
-        void         moveToPositionPixels(Types::PixelPosition positionPixels);
+        void         begin();
+        void         moveToPosition(Types::MicronPosition positionMicrons);
         void         moveRelative(Types::MicronPosition distanceMicrons);
-        void         moveRelativePixels(Types::PixelPosition distancePixels);
-        void         calibrateSystem();
         void         resetRelativeZero();
         bool         waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs);
         void         processCommands();
@@ -40,16 +39,15 @@ namespace MotionSystem
         Types::Speed getCurrentSpeed() const;
 
     private:
-        EncoderInterface*     encoder;
-        SimpleController*     motor;
-        PIDController*        pidController;
-        LimitSwitch*          limitSwitch;
-        StatusReporter*       statusReporter;
-        Types::Speed          currentSpeed;
-        uint64_t              lastStepTime;
-        TaskHandle_t          taskHandle;
-        Types::MicronPosition pixelsToMicrons(Types::PixelPosition pixels);
-        char                  buffer[128];
+        EncoderInterface* encoder;
+        TmcController*    motor;
+        PIDController*    pidController;
+        LimitSwitch*      limitSwitch;
+        StatusReporter*   statusReporter;
+        Types::Speed      currentSpeed;
+        uint64_t          lastStepTime;
+        TaskHandle_t      taskHandle;
+        char              buffer[128];
     };
 }  // namespace MotionSystem
 
