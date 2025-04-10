@@ -103,48 +103,6 @@ namespace MotionSystem
         Serial.println(F("Relative zero position reset at current position"));
     }
 
-    void MotionController::processCommands()
-    {
-        if (Serial.available() > 0)
-        {
-            String command = Serial.readStringUntil('\n');
-            command.trim();
-            command.toUpperCase();
-            if (command.startsWith("MOVE "))
-            {
-                float position = command.substring(5).toFloat();
-                moveToPosition(position);
-            }
-
-            else if (command.startsWith("REL "))
-            {
-                float distance = command.substring(4).toFloat();
-                moveRelative(distance);
-            }
-
-            else if (command == "STATUS")
-            {
-                statusReporter->printStatusUpdate(true);
-            }
-
-            else if (command == "RESET_LIMIT")
-            {
-                limitSwitch->reset();
-                Serial.println(F("Limit switch flag reset"));
-            }
-
-            else if (command == "RESET_POS")
-            {
-                resetRelativeZero();
-            }
-
-            else
-            {
-                Serial.println(F("Unknown command"));
-            }
-        }
-    }
-
     void MotionController::motionTask(void* parameter)
     {
         MotionController* controller = static_cast<MotionController*>(parameter);

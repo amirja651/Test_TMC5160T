@@ -31,7 +31,6 @@ namespace MotionSystem
         void         moveRelative(Types::MicronPosition distanceMicrons);
         void         resetRelativeZero();
         bool         waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs);
-        void         processCommands();
         static void  motionTask(void* parameter);
         void         startTask();
         void         setCurrentSpeed(Types::Speed speed);

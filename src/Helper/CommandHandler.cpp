@@ -89,6 +89,39 @@ namespace MotionSystem
 
     void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
     {
+        /*if (command.startsWith("MOVE "))
+        {
+            float position = command.substring(5).toFloat();
+            moveToPosition(position);
+        }
+
+        else if (command.startsWith("REL "))
+        {
+            float distance = command.substring(4).toFloat();
+            moveRelative(distance);
+        }
+
+        else if (command == "STATUS")
+        {
+            statusReporter->printStatusUpdate(true);
+        }
+
+        else if (command == "RESET_LIMIT")
+        {
+            limitSwitch->reset();
+            Serial.println(F("Limit switch flag reset"));
+        }
+
+        else if (command == "RESET_POS")
+        {
+            resetRelativeZero();
+        }
+
+        else
+        {
+            Serial.println(F("Unknown command"));
+        }*/
+
         if (motors[motorNum - 1].testCommunication(false))
         {
             switch (type)
@@ -98,6 +131,8 @@ namespace MotionSystem
                     Serial.print(motorNum);
                     Serial.println(F(" moving"));
                     // motors[motorNum - 1].move();
+                    // MotionController::getInstance().moveToPosition(position);
+
                     break;
                 case CommandType::MOTOR_FORWARD:
                     Serial.print(F("Motor "));
