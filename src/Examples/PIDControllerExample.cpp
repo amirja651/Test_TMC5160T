@@ -36,7 +36,7 @@ void setup1()
     // Start the PID control task
     pidControllerTest.startTask();
 
-    Logger::getInstance().logln(F("PID Controller Example Started"));
+    Serial.println(F("PID Controller Example Started"));
 }
 
 void loop1()
@@ -64,7 +64,7 @@ void loop1()
                  stats.updateCount, stats.averageUpdateTime * 1000.0f, stats.errorCount, stats.maxError,
                  stats.currentError, stats.currentOutput);
 
-        Logger::getInstance().logln(statusBuffer);
+        Serial.println(statusBuffer);
     }
 
     // Example of moving to different positions
@@ -82,7 +82,7 @@ void loop1()
 
         char moveBuffer[128];
         snprintf(moveBuffer, sizeof(moveBuffer), "Moving to position: %.2f microns", targetPosition);
-        Logger::getInstance().logln(moveBuffer);
+        Serial.println(moveBuffer);
 
         // Move to next position
         positionIndex = (positionIndex + 1) % (sizeof(positions) / sizeof(positions[0]));
@@ -91,7 +91,7 @@ void loop1()
     // Check if PID controller is running
     if (!pidControllerTest.isRunning())
     {
-        Logger::getInstance().logln(F("WARNING: PID controller is not running!"));
+        Serial.println(F("WARNING: PID controller is not running!"));
         delay(1000);
     }
 
@@ -111,12 +111,12 @@ void handlePIDError()
         snprintf(errorBuffer, sizeof(errorBuffer), "PID Error detected: %u errors, Max Error: %.2f", stats.errorCount,
                  stats.maxError);
 
-        Logger::getInstance().logln(errorBuffer);
+        Serial.println(errorBuffer);
 
         // Example of error recovery
         if (stats.errorCount > 10)
         {
-            Logger::getInstance().logln(F("Too many errors, resetting PID controller"));
+            Serial.println(F("Too many errors, resetting PID controller"));
 
             // Stop the current task
             pidControllerTest.stopTask();

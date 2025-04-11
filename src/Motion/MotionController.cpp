@@ -33,7 +33,7 @@ namespace MotionSystem
         }
     }
 
-    void MotionController::begin()
+    bool MotionController::begin()
     {
         encoder->begin();
         motor->begin();
@@ -41,8 +41,10 @@ namespace MotionSystem
         // Test SPI communication first
         if (!motor->testCommunication(false))
         {
+            Serial.print(motor->getInstanceName());
+            Serial.println(F(" - SPI communication error detected"));
             handleError(MotionError::SPI_ERROR);
-            return;
+            return false;
         }
 
         pidController->init();
@@ -61,8 +63,10 @@ namespace MotionSystem
         setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
 
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().logln(F(" - Motion controller initialized"));
+        Serial.print(motor->getInstanceName());
+        Serial.println(F(" - Motion controller initialized"));
+
+        return true;
     }
 
     void MotionController::handleEmergencyStop()
@@ -70,8 +74,8 @@ namespace MotionSystem
         currentSpeed = 0;
         limitSwitch->setEmergencyStop(false);
         currentState = MotionState::ERROR;
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().logln(F(" - EMERGENCY STOP: Limit switch triggered!"));
+        Serial.print(motor->getInstanceName());
+        Serial.println(F(" - EMERGENCY STOP: Limit switch triggered!"));
         lastEmergencyCheck = esp_timer_get_time();
     }
 
@@ -133,7 +137,7 @@ namespace MotionSystem
 
         if (stepInterval > 0 && (currentTime - lastStepTime) >= stepInterval)
         {
-            motor->step();
+            motor->update();
             lastStepTime = currentTime;
             profileMotion();
         }
@@ -171,41 +175,41 @@ namespace MotionSystem
         motor->enableDriver(false);
         currentState = Types::MotionState::ERROR;
 
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().log(F(" - ERROR: "));
+        Serial.print(motor->getInstanceName());
+        Serial.print(F(" - ERROR: "));
 
         switch (error)
         {
             case MotionError::PID_ERROR:
-                Logger::getInstance().logln(F("PID controller error detected"));
+                Serial.println(F("PID controller error detected"));
                 // Attempt to reset PID controller
                 pidController->init();
                 break;
 
             case MotionError::LIMIT_SWITCH_TRIGGERED:
-                Logger::getInstance().logln(F("Limit switch triggered"));
+                Serial.println(F("Limit switch triggered"));
                 break;
 
             case MotionError::ENCODER_ERROR:
-                Logger::getInstance().logln(F("Encoder error detected"));
+                Serial.println(F("Encoder error detected"));
                 // Attempt to reinitialize encoder
                 encoder->begin();
                 break;
 
             case MotionError::MOTOR_ERROR:
-                Logger::getInstance().logln(F("Motor error detected"));
+                Serial.println(F("Motor error detected"));
                 // Attempt to reset motor
                 motor->resetDriverState();
                 break;
 
             case MotionError::SPI_ERROR:
-                Logger::getInstance().logln(F("SPI error detected"));
+                Serial.println(F("SPI error detected"));
                 // Attempt to reset motor
                 motor->resetDriverState();
                 break;
 
             default:
-                Logger::getInstance().logln(F("Unknown error detected"));
+                Serial.println(F("Unknown error detected"));
                 break;
         }
 
@@ -224,8 +228,7 @@ namespace MotionSystem
         if (now - lastProfileTime >= PROFILE_INTERVAL)
         {
             float actualSpeed = (stepCount * 1000000.0f) / (now - lastProfileTime);
-            Logger::getInstance().logf("Motion Profile - Steps/sec: %.1f, State: %d\n", actualSpeed,
-                                       static_cast<int>(currentState));
+            Serial.printf("Motion Profile - Steps/sec: %.1f, State: %d\n", actualSpeed, static_cast<int>(currentState));
             stepCount       = 0;
             lastProfileTime = now;
         }
@@ -339,8 +342,8 @@ namespace MotionSystem
         const UBaseType_t taskPriority = configMAX_PRIORITIES - 1;  // Highest priority
         xTaskCreatePinnedToCore(motionTask, "Motion Control", Tasks::MOTION_TASK_STACK_SIZE, this, taskPriority,
                                 &taskHandle, Tasks::MOTION_TASK_CORE);
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().logln(F(" - Motion control task started"));
+        Serial.print(motor->getInstanceName());
+        Serial.println(F(" - Motion control task started"));
     }
 
     void MotionController::stopTask()
@@ -351,8 +354,8 @@ namespace MotionSystem
             taskHandle   = nullptr;
             currentSpeed = 0;
             currentState = MotionState::IDLE;
-            Logger::getInstance().log(motor->getInstanceName());
-            Logger::getInstance().logln(F(" - Motion control task stopped"));
+            Serial.print(motor->getInstanceName());
+            Serial.println(F(" - Motion control task stopped"));
         }
     }
 
@@ -361,7 +364,7 @@ namespace MotionSystem
         if (positionMicrons < -System::REL_TRAVEL_LIMIT_MICRONS || positionMicrons > System::REL_TRAVEL_LIMIT_MICRONS)
         {
             snprintf_P(buffer, sizeof(buffer), errorMessage, positionMicrons, System::REL_TRAVEL_LIMIT_MM);
-            Logger::getInstance().logln(buffer);
+            Serial.println(buffer);
             return;
         }
 
@@ -369,7 +372,7 @@ namespace MotionSystem
             getRelativeZeroPosition() + MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
-        Logger::getInstance().logln(buffer);
+        Serial.println(buffer);
     }
 
     void MotionController::moveRelative(MicronPosition distanceMicrons)
@@ -379,7 +382,7 @@ namespace MotionSystem
         if (newRelPos < -System::REL_TRAVEL_LIMIT_MICRONS || newRelPos > System::REL_TRAVEL_LIMIT_MICRONS)
         {
             snprintf_P(buffer, sizeof(buffer), errorMessage3, newRelPos, System::REL_TRAVEL_LIMIT_MM);
-            Logger::getInstance().logln(buffer);
+            Serial.println(buffer);
             return;
         }
 
@@ -389,7 +392,7 @@ namespace MotionSystem
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons, distanceMicrons / System::PIXEL_SIZE,
                    targetPosition);
-        Logger::getInstance().logln(buffer);
+        Serial.println(buffer);
     }
 
     bool MotionController::waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs)
@@ -415,8 +418,8 @@ namespace MotionSystem
     {
         EncoderPosition currentPosition = encoder->readPosition();
         setRelativeZeroPosition(currentPosition);
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().logln(F(" - Relative zero position reset at current position"));
+        Serial.print(motor->getInstanceName());
+        Serial.println(F(" - Relative zero position reset at current position"));
     }
 
     void MotionController::setCurrentSpeed(Speed speed)
@@ -442,22 +445,20 @@ namespace MotionSystem
 
         if (motorFrequency > 10 || showStatus)
         {
-            Logger::getInstance().log(motor->getInstanceName());
-            Logger::getInstance().logln(F(": "));
-            Logger::getInstance().logf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n",
-                                       relPosition, abs(relTravelPercent), System::REL_TRAVEL_LIMIT_MM, relTarget,
-                                       error);
+            Serial.print(motor->getInstanceName());
+            Serial.println(F(": "));
+            Serial.printf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n", relPosition,
+                          abs(relTravelPercent), System::REL_TRAVEL_LIMIT_MM, relTarget, error);
 
-            Logger::getInstance().logf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
-                                       (absPosition / System::TOTAL_TRAVEL_MICRONS) * 100, System::TOTAL_TRAVEL_MM);
+            Serial.printf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
+                          (absPosition / System::TOTAL_TRAVEL_MICRONS) * 100, System::TOTAL_TRAVEL_MM);
 
-            Logger::getInstance().logf(
-                "Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
-                (motorFrequency / (System::STEPS_PER_REV * System::MICROSTEPS)) * System::LEAD_SCREW_PITCH,
+            Serial.printf("Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
+                          (motorFrequency / (System::STEPS_PER_REV * System::MICROSTEPS)) * System::LEAD_SCREW_PITCH,
 
-                limitSwitch != nullptr ? limitSwitch->isTriggered() ? "TRIGGERED" : "clear" : "NONE");
+                          limitSwitch != nullptr ? limitSwitch->isTriggered() ? "TRIGGERED" : "clear" : "NONE");
 
-            Logger::getInstance().logln(F("-------------------------------"));
+            Serial.println(F("-------------------------------"));
         }
     }
 

@@ -41,7 +41,7 @@ namespace MotionSystem
         MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
                          LimitSwitch* limitSwitch = nullptr);
         ~MotionController();
-        void                   begin();
+        bool                   begin();
         void                   moveToPosition(Types::MicronPosition positionMicrons);
         void                   moveRelative(Types::MicronPosition distanceMicrons);
         void                   resetRelativeZero();

@@ -17,13 +17,13 @@ void setup2()
 
     // Initialize the logger
     Logger::getInstance().begin();
-    Logger::getInstance().log(F("PWM Encoder Example Started"));
+    Serial.print(F("PWM Encoder Example Started"));
 
     // Initialize the encoder
     encoderTest.begin();
     encoderTest.resetPosition();
 
-    Logger::getInstance().log(F("Encoder initialized and ready"));
+    Serial.print(F("Encoder initialized and ready"));
 }
 
 void loop2()
@@ -35,7 +35,7 @@ void loop2()
     float microns = (position / 1000.0f) * 500.0f;  // 1000 counts/rev * 0.5mm pitch
 
     // Log the position
-    Logger::getInstance().logf(F("Encoder Position: %ld counts (%.2f μm)"), position, microns);
+    // Serial.printf("Encoder Position: %ld counts (%.2f μm)\n", position, microns);
 
     delay(100);  // Update every 100ms
 }

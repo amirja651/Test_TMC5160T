@@ -43,22 +43,22 @@ namespace MotionSystem
     {
         if (kp < 0 || ki < 0 || kd < 0)
         {
-            Logger::getInstance().log(instanceName);
-            Logger::getInstance().logln(F(" - ERROR: Invalid PID gains"));
+            Serial.print(instanceName);
+            Serial.println(F(" - ERROR: Invalid PID gains"));
             return false;
         }
 
         if (maxIntegral <= 0)
         {
-            Logger::getInstance().log(instanceName);
-            Logger::getInstance().logln(F(" - ERROR: Invalid integral limit"));
+            Serial.print(instanceName);
+            Serial.println(F(" - ERROR: Invalid integral limit"));
             return false;
         }
 
         if (maxOutput <= 0)
         {
-            Logger::getInstance().log(instanceName);
-            Logger::getInstance().logln(F(" - ERROR: Invalid output limit"));
+            Serial.print(instanceName);
+            Serial.println(F(" - ERROR: Invalid output limit"));
             return false;
         }
 
@@ -69,15 +69,15 @@ namespace MotionSystem
     {
         if (!encoder)
         {
-            Logger::getInstance().log(instanceName);
-            Logger::getInstance().logln(F(" - ERROR: Encoder not initialized"));
+            Serial.print(instanceName);
+            Serial.println(F(" - ERROR: Encoder not initialized"));
             return;
         }
 
         if (!validateConfig())
         {
-            Logger::getInstance().log(instanceName);
-            Logger::getInstance().logln(F(" - ERROR: Invalid PID configuration"));
+            Serial.print(instanceName);
+            Serial.println(F(" - ERROR: Invalid PID configuration"));
             return;
         }
 
@@ -88,8 +88,8 @@ namespace MotionSystem
         char logBuffer[128];
         snprintf(logBuffer, sizeof(logBuffer), " - PID controller initialized with parameters KP:%.2f KI:%.2f KD:%.2f",
                  kp, ki, kd);
-        Logger::getInstance().log(instanceName);
-        Logger::getInstance().logln(logBuffer);
+        Serial.print(instanceName);
+        Serial.println(logBuffer);
     }
 
     void PIDController::setGains(float kp, float ki, float kd)
@@ -218,7 +218,7 @@ namespace MotionSystem
     {
         if (taskHandle != nullptr)
         {
-            Logger::getInstance().logln(F("WARNING: PID task already running"));
+            Serial.println(F("WARNING: PID task already running"));
             return;
         }
 
@@ -226,8 +226,8 @@ namespace MotionSystem
         xTaskCreatePinnedToCore(pidTask, "PID Control", Tasks::PID_TASK_STACK_SIZE, this, Tasks::PID_TASK_PRIORITY,
                                 &taskHandle, Tasks::PID_TASK_CORE);
 
-        Logger::getInstance().log(instanceName);
-        Logger::getInstance().logln(F(" - PID control task started"));
+        Serial.print(instanceName);
+        Serial.println(F(" - PID control task started"));
     }
 
     void PIDController::stopTask()

@@ -57,7 +57,12 @@ void initializeMotionSystem()
     for (uint8_t i = 0; i < System::NUM_MOTORS; i++)
     {
         // Initialize components in the correct order
-        motionController[i].begin();
+        if (!motionController[i].begin())
+        {
+            String motorName = "Motor " + String(i + 1) + ": Failed to initialize motion controller";
+            Serial.println(motorName);
+            continue;
+        }
         motionController[i].startTask();
     }
 }
@@ -66,10 +71,14 @@ auto& commandHandler = CommandHandler::getInstance();
 
 void setup()
 {
-    Logger::getInstance().begin();
+    Serial.begin(System::SERIAL_BAUD_RATE);
+    delay(System::STARTUP_DELAY_MS);
+    while (!Serial)
+    {
+        delay(10);
+    }
 
-    Logger::getInstance().logln(
-        F("\n ==================== Initializing High Precision Motion Control System ===================="));
+    Serial.println(F("\n ==================== Initializing High Precision Motion Control System ===================="));
 
     commandHandler.begin();
 
