@@ -3,6 +3,8 @@
 
 #include "Config.h"
 #include "Encoders/EncoderInterface.h"
+#include "Helper/Logger.h"
+#include "esp_timer.h"
 
 namespace MotionSystem
 {

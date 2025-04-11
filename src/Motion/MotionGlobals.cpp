@@ -26,7 +26,7 @@ void initializeMotionSystem()
         pidController[i].init();
         motionController[i].begin();
         motionController[i].startTask();
-        Serial.print(F("Motion system initialized for motor "));
-        Serial.println(i + 1);
+        MotionSystem::Logger::getInstance().log(F("Motion system initialized for motor "));
+        MotionSystem::Logger::getInstance().logln(String(i + 1));
     }
 }

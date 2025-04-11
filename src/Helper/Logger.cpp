@@ -96,6 +96,45 @@ namespace MotionSystem
         }
     }
 
+    void Logger::sendHexValue(uint64_t value, uint8_t digits, bool addNewline)
+    {
+        if (messageQueue == nullptr)
+            return;
+
+        LogMessage logMsg;
+        char       format[16];
+        snprintf(format, sizeof(format), "0x%%0%u" PRIX64, digits);
+        snprintf(logMsg.message, MAX_MESSAGE_LENGTH, format, value);
+        logMsg.isFlashString = false;
+        logMsg.addNewline    = addNewline;
+
+        if (xQueueSend(messageQueue, &logMsg, 0) != pdTRUE)
+        {
+            // Queue is full, drop the message
+            Serial.println(F("Logger queue is full, message dropped"));
+        }
+    }
+
+    void Logger::sendDecAsHex(uint64_t value, uint8_t digits, bool addNewline)
+    {
+        if (messageQueue == nullptr)
+            return;
+
+        LogMessage logMsg;
+        char       temp[32];
+        snprintf(temp, sizeof(temp), "%llX", value);
+        snprintf(logMsg.message, MAX_MESSAGE_LENGTH, "0x%*s", digits, temp);
+        logMsg.isFlashString = false;
+        logMsg.addNewline    = addNewline;
+
+        if (xQueueSend(messageQueue, &logMsg, 0) != pdTRUE)
+        {
+            // Queue is full, drop the message
+            Serial.println(F("Logger queue is full, message dropped"));
+        }
+    }
+
+    // Regular logging methods
     void Logger::log(const char* message)
     {
         sendMessage(message, false, false);
@@ -127,6 +166,7 @@ namespace MotionSystem
         va_end(args);
     }
 
+    // Newline logging methods
     void Logger::logln(const char* message)
     {
         sendMessage(message, false, true);
@@ -156,6 +196,170 @@ namespace MotionSystem
         va_start(args, format);
         sendFormattedMessage((const char*)format, true, true, args);
         va_end(args);
+    }
+
+    // HEX value logging methods
+    void Logger::logHex(uint8_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, false);
+    }
+
+    void Logger::logHex(uint16_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, false);
+    }
+
+    void Logger::logHex(uint32_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, false);
+    }
+
+    void Logger::logHex(uint64_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, false);
+    }
+
+    void Logger::logHex(int8_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint8_t>(value), digits, false);
+    }
+
+    void Logger::logHex(int16_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint16_t>(value), digits, false);
+    }
+
+    void Logger::logHex(int32_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint32_t>(value), digits, false);
+    }
+
+    void Logger::logHex(int64_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint64_t>(value), digits, false);
+    }
+
+    // HEX value logging with newline
+    void Logger::loglnHex(uint8_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, true);
+    }
+
+    void Logger::loglnHex(uint16_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, true);
+    }
+
+    void Logger::loglnHex(uint32_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, true);
+    }
+
+    void Logger::loglnHex(uint64_t value, uint8_t digits)
+    {
+        sendHexValue(value, digits, true);
+    }
+
+    void Logger::loglnHex(int8_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint8_t>(value), digits, true);
+    }
+
+    void Logger::loglnHex(int16_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint16_t>(value), digits, true);
+    }
+
+    void Logger::loglnHex(int32_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint32_t>(value), digits, true);
+    }
+
+    void Logger::loglnHex(int64_t value, uint8_t digits)
+    {
+        sendHexValue(static_cast<uint64_t>(value), digits, true);
+    }
+
+    // Decimal to HEX logging methods
+    void Logger::logDecAsHex(uint8_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, false);
+    }
+
+    void Logger::logDecAsHex(uint16_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, false);
+    }
+
+    void Logger::logDecAsHex(uint32_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, false);
+    }
+
+    void Logger::logDecAsHex(uint64_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, false);
+    }
+
+    void Logger::logDecAsHex(int8_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint8_t>(value), digits, false);
+    }
+
+    void Logger::logDecAsHex(int16_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint16_t>(value), digits, false);
+    }
+
+    void Logger::logDecAsHex(int32_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint32_t>(value), digits, false);
+    }
+
+    void Logger::logDecAsHex(int64_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint64_t>(value), digits, false);
+    }
+
+    // Decimal to HEX logging with newline
+    void Logger::loglnDecAsHex(uint8_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, true);
+    }
+
+    void Logger::loglnDecAsHex(uint16_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, true);
+    }
+
+    void Logger::loglnDecAsHex(uint32_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, true);
+    }
+
+    void Logger::loglnDecAsHex(uint64_t value, uint8_t digits)
+    {
+        sendDecAsHex(value, digits, true);
+    }
+
+    void Logger::loglnDecAsHex(int8_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint8_t>(value), digits, true);
+    }
+
+    void Logger::loglnDecAsHex(int16_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint16_t>(value), digits, true);
+    }
+
+    void Logger::loglnDecAsHex(int32_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint32_t>(value), digits, true);
+    }
+
+    void Logger::loglnDecAsHex(int64_t value, uint8_t digits)
+    {
+        sendDecAsHex(static_cast<uint64_t>(value), digits, true);
     }
 
     void Logger::loggerTask(void* parameter)

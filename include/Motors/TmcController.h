@@ -3,6 +3,7 @@
 
 #include <TMCStepper.h>
 #include "Config.h"
+#include "Helper/Logger.h"
 
 namespace MotionSystem
 {

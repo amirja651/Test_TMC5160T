@@ -1,5 +1,4 @@
 #include "Motion/PIDController.h"
-#include "esp_timer.h"
 
 namespace MotionSystem
 {
@@ -28,12 +27,12 @@ namespace MotionSystem
     {
         lastPidTime         = esp_timer_get_time();
         lastEncoderPosition = encoder->readPosition();
-        Serial.println(F("PID controller initialized with parameters KP:"));
-        Serial.println(String(Config::PID::KP));
-        Serial.println(F("KI:"));
-        Serial.println(String(Config::PID::KI));
-        Serial.println(F("KD:"));
-        Serial.println(String(Config::PID::KD));
+        Logger::getInstance().logln(F("PID controller initialized with parameters KP:"));
+        Logger::getInstance().logln(String(Config::PID::KP));
+        Logger::getInstance().logln(F("KI:"));
+        Logger::getInstance().logln(String(Config::PID::KI));
+        Logger::getInstance().logln(F("KD:"));
+        Logger::getInstance().logln(String(Config::PID::KD));
     }
 
     void PIDController::setTargetPosition(Types::EncoderPosition targetPosition)
@@ -94,7 +93,7 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(pidTask, "PID Control", Config::Tasks::PID_TASK_STACK_SIZE, this,
                                 Config::Tasks::PID_TASK_PRIORITY, &taskHandle, Config::Tasks::PID_TASK_CORE);
-        Serial.println(F("PID control task started"));
+        Logger::getInstance().logln(F("PID control task started"));
     }
 
 }  // namespace MotionSystem

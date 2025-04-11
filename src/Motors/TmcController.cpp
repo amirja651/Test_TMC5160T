@@ -48,7 +48,7 @@ void MotionSystem::TmcController::moveForward()
 {
     if (!diagnoseTMC5160())
     {
-        Serial.println(F("❌ Driver error detected. Motor will not move."));
+        Logger::getInstance().logln(F("❌ Driver error detected. Motor will not move."));
         return;
     }
 
@@ -59,7 +59,7 @@ void MotionSystem::TmcController::moveReverse()
 {
     if (!diagnoseTMC5160())
     {
-        Serial.println(F("❌ Driver error detected. Motor will not move."));
+        Logger::getInstance().logln(F("❌ Driver error detected. Motor will not move."));
         return;
     }
 
@@ -88,25 +88,25 @@ void MotionSystem::TmcController::update()
             {
                 uint32_t load_value = driver.sg_result();
                 int      temp       = getTemperature();
-                Serial.print(F("Diagnostics - "));
-                Serial.print(instanceName);
-                Serial.print(F(": Load="));
-                Serial.print(load_value);
-                Serial.print(F(", Temp="));
-                Serial.print(temp);
-                Serial.println(F("°C"));
+                Logger::getInstance().log(F("Diagnostics - "));
+                Logger::getInstance().log(instanceName);
+                Logger::getInstance().log(F(": Load="));
+                Logger::getInstance().log(String(load_value));
+                Logger::getInstance().log(F(", Temp="));
+                Logger::getInstance().log(String(temp));
+                Logger::getInstance().logln(F("°C"));
                 uint32_t status = driver.DRV_STATUS();
                 if (status & 0x00000200)
                 {
-                    Serial.println(F("❌ HARD STALL detected! Stopping motor."));
+                    Logger::getInstance().logln(F("❌ HARD STALL detected! Stopping motor."));
                     stop();  // Stop motor on stall
                     printStallGuardStatus(status);
                 }
 
                 if (driver.sg_result() < stallGuardThreshold)
                 {
-                    Serial.print(F("⚠️ Pre-stall warning on "));
-                    Serial.println(instanceName);
+                    Logger::getInstance().log(F("⚠️ Pre-stall warning on "));
+                    Logger::getInstance().logln(instanceName);
                     uint16_t originalCurrent = runCurrent;
                     driver.rms_current(runCurrent * 0.7);
                     delay(100);
@@ -123,10 +123,10 @@ void MotionSystem::TmcController::update()
             uint16_t load = driver.sg_result();
             if (load > 1500)
             {
-                Serial.print(F("⚠️ WARNING: High load detected on "));
-                Serial.print(instanceName);
-                Serial.print(F(": "));
-                Serial.println(load);
+                Logger::getInstance().log(F("⚠️ WARNING: High load detected on "));
+                Logger::getInstance().log(instanceName);
+                Logger::getInstance().log(F(": "));
+                Logger::getInstance().logln(String(load));
             }
 
             else if (load > 1000)
@@ -154,10 +154,10 @@ void MotionSystem::TmcController::update()
             int temp = getTemperature();
             if (temp > 80)
             {
-                Serial.print(F("⚠️ WARNING: High temperature detected on "));
-                Serial.print(instanceName);
-                Serial.print(F(": "));
-                Serial.println(temp);
+                Logger::getInstance().log(F("⚠️ WARNING: High temperature detected on "));
+                Logger::getInstance().log(instanceName);
+                Logger::getInstance().log(F(": "));
+                Logger::getInstance().logln(String(temp));
                 uint16_t reducedCurrent = runCurrent * 0.8;
                 driver.rms_current(reducedCurrent);
             }
@@ -200,14 +200,14 @@ void MotionSystem::TmcController::increaseRunCurrent()
     {
         runCurrent += 100;
         driver.rms_current(runCurrent);
-        Serial.print(F("Run current increased to: "));
-        Serial.print(runCurrent);
-        Serial.println(F("mA (Max: 1000mA)"));
+        Logger::getInstance().log(F("Run current increased to: "));
+        Logger::getInstance().log(String(runCurrent));
+        Logger::getInstance().logln(F("mA (Max: 1000mA)"));
     }
 
     else
     {
-        Serial.println(F("⚠️ Run current at maximum (1000mA)"));
+        Logger::getInstance().logln(F("⚠️ Run current at maximum (1000mA)"));
     }
 }
 
@@ -217,14 +217,14 @@ void MotionSystem::TmcController::decreaseRunCurrent()
     {
         runCurrent -= 100;
         driver.rms_current(runCurrent);
-        Serial.print(F("Run current decreased to: "));
-        Serial.print(runCurrent);
-        Serial.println(F("mA (Min: 100mA)"));
+        Logger::getInstance().log(F("Run current decreased to: "));
+        Logger::getInstance().log(String(runCurrent));
+        Logger::getInstance().logln(F("mA (Min: 100mA)"));
     }
 
     else
     {
-        Serial.println(F("⚠️ Run current at minimum (100mA)"));
+        Logger::getInstance().logln(F("⚠️ Run current at minimum (100mA)"));
     }
 }
 
@@ -234,14 +234,14 @@ void MotionSystem::TmcController::increaseHoldCurrent()
     {
         holdCurrent += 100;
         driver.ihold(holdCurrent);
-        Serial.print(F("Hold current increased to: "));
-        Serial.print(holdCurrent);
-        Serial.println(F("mA (Max: 500mA)"));
+        Logger::getInstance().log(F("Hold current increased to: "));
+        Logger::getInstance().log(String(holdCurrent));
+        Logger::getInstance().logln(F("mA (Max: 500mA)"));
     }
 
     else
     {
-        Serial.println(F("Hold current at maximum (500mA)"));
+        Logger::getInstance().logln(F("Hold current at maximum (500mA)"));
     }
 }
 
@@ -251,14 +251,14 @@ void MotionSystem::TmcController::decreaseHoldCurrent()
     {
         holdCurrent -= 100;
         driver.ihold(holdCurrent);
-        Serial.print(F("Hold current decreased to: "));
-        Serial.print(holdCurrent);
-        Serial.println(F("mA (Min: 100mA)"));
+        Logger::getInstance().log(F("Hold current decreased to: "));
+        Logger::getInstance().log(String(holdCurrent));
+        Logger::getInstance().logln(F("mA (Min: 100mA)"));
     }
 
     else
     {
-        Serial.println(F("Hold current at minimum (100mA)"));
+        Logger::getInstance().logln(F("Hold current at minimum (100mA)"));
     }
 }
 
@@ -277,14 +277,14 @@ void MotionSystem::TmcController::increaseSpeed()
     if (speed < 10000)
     {
         speed += 100;
-        Serial.print(F("Speed increased to: "));
-        Serial.print(speed);
-        Serial.println(F(" steps/sec"));
+        Logger::getInstance().log(F("Speed increased to: "));
+        Logger::getInstance().log(String(speed));
+        Logger::getInstance().logln(F(" steps/sec"));
     }
 
     else
     {
-        Serial.println(F("Speed at maximum (10000 steps/sec)"));
+        Logger::getInstance().logln(F("Speed at maximum (10000 steps/sec)"));
     }
 }
 
@@ -293,14 +293,14 @@ void MotionSystem::TmcController::decreaseSpeed()
     if (speed > 100)
     {
         speed -= 100;
-        Serial.print(F("Speed decreased to: "));
-        Serial.print(speed);
-        Serial.println(F(" steps/sec"));
+        Logger::getInstance().log(F("Speed decreased to: "));
+        Logger::getInstance().log(String(speed));
+        Logger::getInstance().logln(F(" steps/sec"));
     }
 
     else
     {
-        Serial.println(F("Speed at minimum (100 steps/sec)"));
+        Logger::getInstance().logln(F("Speed at minimum (100 steps/sec)"));
     }
 }
 
@@ -310,14 +310,14 @@ void MotionSystem::TmcController::increaseAcceleration()
     {
         acceleration += 100;
         driver.AMAX(acceleration);
-        Serial.print(F("Acceleration increased to: "));
-        Serial.print(acceleration);
-        Serial.println(F(" steps/sec²"));
+        Logger::getInstance().log(F("Acceleration increased to: "));
+        Logger::getInstance().log(String(acceleration));
+        Logger::getInstance().logln(F(" steps/sec²"));
     }
 
     else
     {
-        Serial.println(F("Acceleration at maximum (10000 steps/sec²)"));
+        Logger::getInstance().logln(F("Acceleration at maximum (10000 steps/sec²)"));
     }
 }
 
@@ -327,14 +327,14 @@ void MotionSystem::TmcController::decreaseAcceleration()
     {
         acceleration -= 100;
         driver.AMAX(acceleration);
-        Serial.print(F("Acceleration decreased to: "));
-        Serial.print(acceleration);
-        Serial.println(F(" steps/sec²"));
+        Logger::getInstance().log(F("Acceleration decreased to: "));
+        Logger::getInstance().log(String(acceleration));
+        Logger::getInstance().logln(F(" steps/sec²"));
     }
 
     else
     {
-        Serial.println(F("Acceleration at minimum (100 steps/sec²)"));
+        Logger::getInstance().logln(F("Acceleration at minimum (100 steps/sec²)"));
     }
 }
 
@@ -351,82 +351,84 @@ uint16_t MotionSystem::TmcController::getAcceleration() const
 void MotionSystem::TmcController::printDriverStatus()
 {
     uint32_t status = driver.DRV_STATUS();
-    Serial.println(F("🧠 DRV_STATUS Report"));
-    Serial.println(F("──────────────────────────────────────────────"));
-    Serial.println(status & (1 << 31) ? F("✅ Standstill (stst)") : F("🌀 Motor moving"));
-    Serial.println(status & (1 << 30) ? F("❌ Open load on Phase B (olb)") : F("✅ Phase B OK"));
-    Serial.println(status & (1 << 29) ? F("❌ Open load on Phase A (ola)") : F("✅ Phase A OK"));
-    Serial.println(status & (1 << 28) ? F("❌ Short to GND on Phase B (s2gb)") : F("✅ Phase B GND OK"));
-    Serial.println(status & (1 << 27) ? F("❌ Short to GND on Phase A (s2ga)") : F("✅ Phase A GND OK"));
-    Serial.println(status & (1 << 26) ? F("⚠️  Overtemperature pre-warning (otpw)") : F("✅ Temp OK"));
-    Serial.println(status & (1 << 25) ? F("🔥 Overtemperature shutdown (ot)") : F("✅ Not overheated"));
-    Serial.println(status & (1 << 24) ? F("⚠️  StallGuard: Stall detected!") : F("✅ No stall"));
-    Serial.println(status & (1 << 15) ? F("📦 Fullstep active (fsactive)") : F("⏩ Microstepping active"));
-    Serial.println(status & (1 << 14) ? F("🎧 StealthChop active (stealth)") : F("⚡ SpreadCycle active"));
-    Serial.println(status & (1 << 13) ? F("❌ Short to V+ on Phase B (s2vbs)") : F("✅ Phase B Supply OK"));
-    Serial.println(status & (1 << 12) ? F("❌ Short to V+ on Phase A (s2vsa)") : F("✅ Phase A Supply OK"));
+    Logger::getInstance().logln(F("🧠 DRV_STATUS Report"));
+    Logger::getInstance().logln(F("──────────────────────────────────────────────"));
+    Logger::getInstance().logln(status & (1 << 31) ? F("✅ Standstill (stst)") : F("🌀 Motor moving"));
+    Logger::getInstance().logln(status & (1 << 30) ? F("❌ Open load on Phase B (olb)") : F("✅ Phase B OK"));
+    Logger::getInstance().logln(status & (1 << 29) ? F("❌ Open load on Phase A (ola)") : F("✅ Phase A OK"));
+    Logger::getInstance().logln(status & (1 << 28) ? F("❌ Short to GND on Phase B (s2gb)") : F("✅ Phase B GND OK"));
+    Logger::getInstance().logln(status & (1 << 27) ? F("❌ Short to GND on Phase A (s2ga)") : F("✅ Phase A GND OK"));
+    Logger::getInstance().logln(status & (1 << 26) ? F("⚠️  Overtemperature pre-warning (otpw)") : F("✅ Temp OK"));
+    Logger::getInstance().logln(status & (1 << 25) ? F("🔥 Overtemperature shutdown (ot)") : F("✅ Not overheated"));
+    Logger::getInstance().logln(status & (1 << 24) ? F("⚠️  StallGuard: Stall detected!") : F("✅ No stall"));
+    Logger::getInstance().logln(status & (1 << 15) ? F("📦 Fullstep active (fsactive)") : F("⏩ Microstepping active"));
+    Logger::getInstance().logln(status & (1 << 14) ? F("🎧 StealthChop active (stealth)") : F("⚡ SpreadCycle active"));
+    Logger::getInstance().logln(status & (1 << 13) ? F("❌ Short to V+ on Phase B (s2vbs)")
+                                                   : F("✅ Phase B Supply OK"));
+    Logger::getInstance().logln(status & (1 << 12) ? F("❌ Short to V+ on Phase A (s2vsa)")
+                                                   : F("✅ Phase A Supply OK"));
     uint8_t cs_actual = (status >> 17) & 0x0F;
-    Serial.print(F("CS_ACTUAL (current scaling): "));
-    Serial.println(cs_actual);
+    Logger::getInstance().log(F("CS_ACTUAL (current scaling): "));
+    Logger::getInstance().logln(String(cs_actual));
     float current_mA = cs_actual / 32.0 * driver.rms_current();
-    Serial.print(F("Estimated actual current = "));
-    Serial.print(current_mA);
-    Serial.println(F(" mA"));
+    Logger::getInstance().log(F("Estimated actual current = "));
+    Logger::getInstance().log(String(current_mA));
+    Logger::getInstance().logln(F(" mA"));
     uint16_t sg_result = status & 0x03FF;
     if (sg_result < 100)
     {
-        Serial.println(F("⚠️  Possi ble stall condition!"));
+        Logger::getInstance().logln(F("⚠️  Possi ble stall condition!"));
     }
 
     else if (sg_result < 500)
     {
-        Serial.println(F("ℹ️  Moderate load"));
+        Logger::getInstance().logln(F("ℹ️  Moderate load"));
     }
 
     else
     {
-        Serial.println(F("✅ Light load"));
+        Logger::getInstance().logln(F("✅ Light load"));
     }
 
-    Serial.println(F("──────────────────────────────────────────────"));
+    Logger::getInstance().logln(F("──────────────────────────────────────────────"));
 }
 
 void MotionSystem::TmcController::printDriverConfig()
 {
-    Serial.println(F("\nDriver Configuration:"));
-    Serial.println(F("-------------------"));
-    Serial.print(F("  Run Current: "));
-    Serial.print(runCurrent);
-    Serial.println(F("mA"));
-    Serial.print(F("  Hold Current: "));
-    Serial.print(holdCurrent);
-    Serial.println(F("mA"));
-    Serial.print(F("  Microsteps: "));
-    Serial.println(16);
-    Serial.print(F("  Speed: "));
-    Serial.print(speed);
-    Serial.println(F(" steps/sec"));
-    Serial.print(F("  Acceleration: "));
-    Serial.print(acceleration);
-    Serial.println(F(" steps/sec²"));
-    Serial.println(F("\nDriver Parameters:"));
-    Serial.println(F("------------------"));
-    Serial.print(F("  GCONF (Global Config): 0x"));
-    Serial.println(driver.GCONF(), HEX);
-    Serial.print(F("  TPOWERDOWN (Power Down Time): "));
-    Serial.print(driver.TPOWERDOWN());
-    Serial.println(F(" tclk"));
-    Serial.print(F("  TSTEP (Current Step Timing): "));
-    Serial.print(driver.TSTEP());
-    Serial.println(F(" tclk"));
-    Serial.print(F("  TPWMTHRS (StealthChop Threshold): "));
-    Serial.print(driver.TPWMTHRS());
-    Serial.println(F(" tclk"));
-    Serial.print(F("  THIGH (Step Pulse High Time): "));
-    Serial.print(driver.THIGH());
-    Serial.println(F(" tclk"));
-    Serial.print(F("  XDIRECT (Direct Coil Control): 0x"));
-    Serial.println(driver.XDIRECT(), HEX);
+    Logger::getInstance().logln(F("\nDriver Configuration:"));
+    Logger::getInstance().logln(F("-------------------"));
+    Logger::getInstance().log(F("  Run Current: "));
+    Logger::getInstance().log(String(runCurrent));
+    Logger::getInstance().logln(F("mA"));
+    Logger::getInstance().log(F("  Hold Current: "));
+    Logger::getInstance().log(String(holdCurrent));
+    Logger::getInstance().logln(F("mA"));
+    Logger::getInstance().log(F("  Microsteps: "));
+    Logger::getInstance().logln(String(16));
+    Logger::getInstance().log(F("  Speed: "));
+    Logger::getInstance().log(String(speed));
+    Logger::getInstance().logln(F(" steps/sec"));
+    Logger::getInstance().log(F("  Acceleration: "));
+    Logger::getInstance().log(String(acceleration));
+    Logger::getInstance().logln(F(" steps/sec²"));
+    Logger::getInstance().logln(F("\nDriver Parameters:"));
+    Logger::getInstance().logln(F("------------------"));
+    Logger::getInstance().log(F("  GCONF (Global Config): 0x"));
+    Logger::getInstance().logDecAsHex(driver.GCONF());
+    Logger::getInstance().log(F("  TPOWERDOWN (Power Down Time): "));
+    Logger::getInstance().log(String(driver.TPOWERDOWN()));
+    Logger::getInstance().logln(F(" tclk"));
+    Logger::getInstance().log(F("  TSTEP (Current Step Timing): "));
+    Logger::getInstance().log(String(driver.TSTEP()));
+    Logger::getInstance().logln(F(" tclk"));
+    Logger::getInstance().log(F("  TPWMTHRS (StealthChop Threshold): "));
+    Logger::getInstance().log(String(driver.TPWMTHRS()));
+    Logger::getInstance().logln(F(" tclk"));
+    Logger::getInstance().log(F("  THIGH (Step Pulse High Time): "));
+    Logger::getInstance().log(String(driver.THIGH()));
+    Logger::getInstance().logln(F(" tclk"));
+    Logger::getInstance().log(F("  XDIRECT (Direct Coil Control): 0x"));
+    Logger::getInstance().logDecAsHex(driver.XDIRECT());
 }
 
 int MotionSystem::TmcController::getTemperature()
@@ -441,10 +443,10 @@ void MotionSystem::TmcController::printTemperature()
     int temp = getTemperature();
     if (temp != lastTemperature)
     {
-        Serial.print(instanceName);
-        Serial.print(F(": "));
-        Serial.print(temp);
-        Serial.println(F("°C"));
+        Logger::getInstance().log(instanceName);
+        Logger::getInstance().log(F(": "));
+        Logger::getInstance().log(String(temp));
+        Logger::getInstance().logln(F("°C"));
         lastTemperature = temp;
     }
 }
@@ -455,13 +457,13 @@ void MotionSystem::TmcController::toggleStealthChop()
     if (currentThreshold == 0)
     {
         driver.TPWMTHRS(500);  // Switch to SpreadCycle above 500 steps/sec
-        Serial.println(F("⚡ Switched to SpreadCycle mode (more power, more noise)"));
+        Logger::getInstance().logln(F("⚡ Switched to SpreadCycle mode (more power, more noise)"));
     }
 
     else
     {
         driver.TPWMTHRS(0);  // Enable StealthChop mode
-        Serial.println(F("✅ Switched to StealthChop mode (silent operation)"));
+        Logger::getInstance().logln(F("✅ Switched to StealthChop mode (silent operation)"));
     }
 }
 
@@ -471,13 +473,13 @@ void MotionSystem::TmcController::setStealthChopMode(bool enable)
     if (enable)
     {
         driver.TPWMTHRS(0);  // StealthChop always
-        Serial.println(F("✅ StealthChop mode activated (TPWMTHRS = 0)"));
+        Logger::getInstance().logln(F("✅ StealthChop mode activated (TPWMTHRS = 0)"));
     }
 
     else
     {
         driver.TPWMTHRS(300);  // SpreadCycle beyond this speed
-        Serial.println(F("⚡ SpreadCycle mode activated (TPWMTHRS = 300)"));
+        Logger::getInstance().logln(F("⚡ SpreadCycle mode activated (TPWMTHRS = 300)"));
     }
 }
 
@@ -487,43 +489,43 @@ bool MotionSystem::TmcController::diagnoseTMC5160()
     bool     ok     = true;
     if (status & (1 << 27))
     {
-        Serial.println(F("❌ ERROR: Short to GND on Phase A (s2ga)"));
+        Logger::getInstance().logln(F("❌ ERROR: Short to GND on Phase A (s2ga)"));
         ok = false;
     }
 
     if (status & (1 << 28))
     {
-        Serial.println(F("❌ ERROR: Short to GND on Phase B (s2gb)"));
+        Logger::getInstance().logln(F("❌ ERROR: Short to GND on Phase B (s2gb)"));
         ok = false;
     }
 
     if (status & (1 << 12))
     {
-        Serial.println(F("❌ ERROR: Short to supply on Phase A (s2vsa)"));
+        Logger::getInstance().logln(F("❌ ERROR: Short to supply on Phase A (s2vsa)"));
         ok = false;
     }
 
     if (status & (1 << 13))
     {
-        Serial.println(F("❌ ERROR: Short to supply on Phase B (s2vsb)"));
+        Logger::getInstance().logln(F("❌ ERROR: Short to supply on Phase B (s2vsb)"));
         ok = false;
     }
 
     if (status & (1 << 25))
     {
-        Serial.println(F("🔥 CRITICAL: Overtemperature shutdown active (ot)"));
+        Logger::getInstance().logln(F("🔥 CRITICAL: Overtemperature shutdown active (ot)"));
         ok = false;
     }
 
     if (status & (1 << 24))
     {
-        Serial.println(F("⚠️  WARNING: Motor stall detected (StallGuard)"));
+        Logger::getInstance().logln(F("⚠️  WARNING: Motor stall detected (StallGuard)"));
         ok = false;
     }
 
     if (ok)
     {
-        Serial.println(F("✅ All driver diagnostics OK."));
+        Logger::getInstance().logln(F("✅ All driver diagnostics OK."));
     }
 
     return ok;
@@ -533,9 +535,9 @@ bool MotionSystem::TmcController::testCommunication(bool enableMessage)
 {
     if (enableMessage)
     {
-        Serial.print(instanceName);
-        Serial.print(F(" - "));
-        Serial.print(F("Testing SPI communication with TMC5160: "));
+        Logger::getInstance().log(instanceName);
+        Logger::getInstance().log(F(" - "));
+        Logger::getInstance().log(F("Testing SPI communication with TMC5160: "));
     }
 
     enableSPI();
@@ -545,7 +547,7 @@ bool MotionSystem::TmcController::testCommunication(bool enableMessage)
     {
         if (enableMessage)
         {
-            Serial.println(F("❌ Failed\n"));
+            Logger::getInstance().logln(F("❌ Failed\n"));
         }
 
         return false;
@@ -553,7 +555,7 @@ bool MotionSystem::TmcController::testCommunication(bool enableMessage)
 
     if (enableMessage)
     {
-        Serial.println(F("✅ Ok\n"));
+        Logger::getInstance().logln(F("✅ Ok\n"));
     }
 
     return true;
@@ -753,15 +755,15 @@ void MotionSystem::TmcController::setDirection(bool forward)
     direction = forward;
     digitalWrite(dirPin, direction ? HIGH : LOW);
     delay(5);
-    Serial.print(F("Moving "));
-    Serial.println(forward ? F("Forward") : F("Reverse"));
+    Logger::getInstance().log(F("Moving "));
+    Logger::getInstance().logln(forward ? F("Forward") : F("Reverse"));
 }
 
 void MotionSystem::TmcController::printStatusRegister(uint32_t status)
 {
-    Serial.println(F("\nDriver Status Register:"));
-    Serial.print(F("Raw Status: 0x"));
-    Serial.println(status, HEX);
+    Logger::getInstance().logln(F("\nDriver Status Register:"));
+    Logger::getInstance().log(F("Raw Status: 0x"));
+    Logger::getInstance().logDecAsHex(status);
     printErrorFlags(status);
     printStallGuardStatus(status);
     printDriverState(status);
@@ -769,37 +771,37 @@ void MotionSystem::TmcController::printStatusRegister(uint32_t status)
 
 void MotionSystem::TmcController::printErrorFlags(uint32_t status)
 {
-    Serial.println(F("\nError Flags:"));
-    Serial.print(F("  Over Temperature: "));
-    Serial.println((status & 0x00000001) ? F("Yes") : F("No"));
-    Serial.print(F("  Short to Ground A: "));
-    Serial.println((status & 0x00000002) ? F("Yes") : F("No"));
-    Serial.print(F("  Short to Ground B: "));
-    Serial.println((status & 0x00000004) ? F("Yes") : F("No"));
-    Serial.print(F("  Open Load A: "));
-    Serial.println((status & 0x00000008) ? F("Yes") : F("No"));
-    Serial.print(F("  Open Load B: "));
-    Serial.println((status & 0x00000010) ? F("Yes") : F("No"));
+    Logger::getInstance().logln(F("\nError Flags:"));
+    Logger::getInstance().log(F("  Over Temperature: "));
+    Logger::getInstance().logln((status & 0x00000001) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Short to Ground A: "));
+    Logger::getInstance().logln((status & 0x00000002) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Short to Ground B: "));
+    Logger::getInstance().logln((status & 0x00000004) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Open Load A: "));
+    Logger::getInstance().logln((status & 0x00000008) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Open Load B: "));
+    Logger::getInstance().logln((status & 0x00000010) ? F("Yes") : F("No"));
 }
 
 void MotionSystem::TmcController::printStallGuardStatus(uint32_t status)
 {
-    Serial.println(F("\nStallGuard Status:"));
-    Serial.print(F("  StallGuard Value: "));
-    Serial.println((status >> 10) & 0x3FF);
-    Serial.print(F("  Stall Detected: "));
-    Serial.println((status & 0x00000200) ? F("Yes") : F("No"));
+    Logger::getInstance().logln(F("\nStallGuard Status:"));
+    Logger::getInstance().log(F("  StallGuard Value: "));
+    Logger::getInstance().logln(String((status >> 10) & 0x3FF));
+    Logger::getInstance().log(F("  Stall Detected: "));
+    Logger::getInstance().logln((status & 0x00000200) ? F("Yes") : F("No"));
 }
 
 void MotionSystem::TmcController::printDriverState(uint32_t status)
 {
-    Serial.println(F("\nDriver State:"));
-    Serial.print(F("  Standstill: "));
-    Serial.println((status & 0x00000400) ? F("Yes") : F("No"));
-    Serial.print(F("  Velocity Reached: "));
-    Serial.println((status & 0x00000800) ? F("Yes") : F("No"));
-    Serial.print(F("  Position Reached: "));
-    Serial.println((status & 0x00001000) ? F("Yes") : F("No"));
+    Logger::getInstance().logln(F("\nDriver State:"));
+    Logger::getInstance().log(F("  Standstill: "));
+    Logger::getInstance().logln((status & 0x00000400) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Velocity Reached: "));
+    Logger::getInstance().logln((status & 0x00000800) ? F("Yes") : F("No"));
+    Logger::getInstance().log(F("  Position Reached: "));
+    Logger::getInstance().logln((status & 0x00001000) ? F("Yes") : F("No"));
 }
 
 uint32_t MotionSystem::TmcController::calculateStepInterval(Types::Speed speed)

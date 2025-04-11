@@ -2,6 +2,10 @@
 #define COMMAND_HANDLER_H
 
 #include "Config.h"
+#include "Globals.h"
+#include "Helper/Logger.h"
+#include "Helper/Utils.h"
+#include "Motion/MotionGlobals.h"
 
 namespace MotionSystem
 {

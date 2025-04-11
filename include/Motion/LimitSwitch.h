@@ -2,6 +2,7 @@
 #define LIMIT_SWITCH_H
 
 #include "Config.h"
+#include "Helper/Logger.h"
 
 namespace MotionSystem
 {

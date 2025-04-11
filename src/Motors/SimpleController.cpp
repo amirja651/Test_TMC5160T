@@ -10,12 +10,12 @@ namespace MotionSystem
         pinMode(Config::Pins::DIR_PIN, OUTPUT);
         pinMode(Config::Pins::ENABLE_PIN, OUTPUT);
         digitalWrite(Config::Pins::ENABLE_PIN, LOW);  // Enable the motor driver
-        Serial.print(F("Stepper motor initialized on pins STEP:"));
-        Serial.print(String(Config::Pins::STEP_PIN));
-        Serial.print(F(" DIR:"));
-        Serial.print(String(Config::Pins::DIR_PIN));
-        Serial.print(F(" EN:"));
-        Serial.println(String(Config::Pins::ENABLE_PIN));
+        Logger::getInstance().log(F("Stepper motor initialized on pins STEP:"));
+        Logger::getInstance().log(String(Config::Pins::STEP_PIN));
+        Logger::getInstance().log(F(" DIR:"));
+        Logger::getInstance().log(String(Config::Pins::DIR_PIN));
+        Logger::getInstance().log(F(" EN:"));
+        Logger::getInstance().logln(String(Config::Pins::ENABLE_PIN));
     }
 
     void SimpleController ::enableDriver(bool enable)

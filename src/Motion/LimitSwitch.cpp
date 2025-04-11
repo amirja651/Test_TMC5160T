@@ -23,8 +23,8 @@ namespace MotionSystem
         attachInterrupt(
             digitalPinToInterrupt(Config::Pins::LIMIT_SWITCH_PIN), []() { LimitSwitch::limitSwitchISR(nullptr); },
             FALLING);
-        Serial.print(F("Limit switch configured on pin "));
-        Serial.println(String(Config::Pins::LIMIT_SWITCH_PIN));
+        Logger::getInstance().log(F("Limit switch configured on pin "));
+        Logger::getInstance().logln(String(Config::Pins::LIMIT_SWITCH_PIN));
     }
 
     bool LimitSwitch::isTriggered() const

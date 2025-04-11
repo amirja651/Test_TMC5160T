@@ -2,6 +2,7 @@
 #define MOTION_GLOBALS_H
 
 #include "Globals.h"
+#include "Helper/Logger.h"
 #include "Helper/StatusReporter.h"
 #include "Motion/LimitSwitch.h"
 #include "Motion/MotionController.h"

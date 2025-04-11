@@ -35,7 +35,7 @@ namespace MotionSystem
         statusReporter->setAbsoluteZeroPosition(initialPosition);
         statusReporter->setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
-        Serial.println(F("Motion controller initialized"));
+        Logger::getInstance().logln(F("Motion controller initialized"));
     }
 
     void MotionController::moveToPosition(Types::MicronPosition positionMicrons)
@@ -44,7 +44,7 @@ namespace MotionSystem
             positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS)
         {
             snprintf_P(buffer, sizeof(buffer), errorMessage, positionMicrons, Config::System::REL_TRAVEL_LIMIT_MM);
-            Serial.println(buffer);
+            Logger::getInstance().logln(buffer);
             return;
         }
 
@@ -52,7 +52,7 @@ namespace MotionSystem
                                                 MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
-        Serial.println(buffer);
+        Logger::getInstance().logln(buffer);
     }
 
     void MotionController::moveRelative(Types::MicronPosition distanceMicrons)
@@ -63,7 +63,7 @@ namespace MotionSystem
             newRelPos > Config::System::REL_TRAVEL_LIMIT_MICRONS)
         {
             snprintf_P(buffer, sizeof(buffer), errorMessage3, newRelPos, Config::System::REL_TRAVEL_LIMIT_MM);
-            Serial.println(buffer);
+            Logger::getInstance().logln(buffer);
             return;
         }
 
@@ -73,7 +73,7 @@ namespace MotionSystem
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons,
                    distanceMicrons / Config::System::PIXEL_SIZE, targetPosition);
-        Serial.println(buffer);
+        Logger::getInstance().logln(buffer);
     }
 
     bool MotionController::waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs)
@@ -100,7 +100,7 @@ namespace MotionSystem
     {
         Types::EncoderPosition currentPosition = encoder->readPosition();
         statusReporter->setRelativeZeroPosition(currentPosition);
-        Serial.println(F("Relative zero position reset at current position"));
+        Logger::getInstance().logln(F("Relative zero position reset at current position"));
     }
 
     void MotionController::motionTask(void* parameter)
@@ -113,7 +113,7 @@ namespace MotionSystem
             {
                 controller->currentSpeed = 0;
                 controller->limitSwitch->setEmergencyStop(false);  // Reset flag
-                Serial.println(F("EMERGENCY STOP: Limit switch triggered!"));
+                Logger::getInstance().logln(F("EMERGENCY STOP: Limit switch triggered!"));
                 vTaskDelay(100);  // Give time for other tasks
                 continue;
             }
@@ -167,7 +167,7 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(motionTask, "Motion Control", Config::Tasks::MOTION_TASK_STACK_SIZE, this,
                                 Config::Tasks::MOTION_TASK_PRIORITY, &taskHandle, Config::Tasks::MOTION_TASK_CORE);
-        Serial.println(F("Motion control task started"));
+        Logger::getInstance().logln(F("Motion control task started"));
     }
 
     void MotionController::setCurrentSpeed(Types::Speed speed)

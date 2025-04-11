@@ -33,15 +33,17 @@ namespace MotionSystem
         float relTravelPercent = (relPosition / Config::System::REL_TRAVEL_LIMIT_MICRONS) * 100;
         if (motorFrequency > 10 || showStatus)
         {
-            Serial.printf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n", relPosition,
-                          abs(relTravelPercent), Config::System::REL_TRAVEL_LIMIT_MM, relTarget, error);
-            Serial.printf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
-                          (absPosition / Config::System::TOTAL_TRAVEL_MICRONS) * 100, Config::System::TOTAL_TRAVEL_MM);
-            Serial.printf("Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
-                          (motorFrequency / (Config::System::STEPS_PER_REV * Config::System::MICROSTEPS)) *
-                              Config::System::LEAD_SCREW_PITCH,
-                          limitSwitch->isTriggered() ? "TRIGGERED" : "clear");
-            Serial.println(F("-------------------------------"));
+            Logger::getInstance().logf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n",
+                                       relPosition, abs(relTravelPercent), Config::System::REL_TRAVEL_LIMIT_MM,
+                                       relTarget, error);
+            Logger::getInstance().logf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
+                                       (absPosition / Config::System::TOTAL_TRAVEL_MICRONS) * 100,
+                                       Config::System::TOTAL_TRAVEL_MM);
+            Logger::getInstance().logf("Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
+                                       (motorFrequency / (Config::System::STEPS_PER_REV * Config::System::MICROSTEPS)) *
+                                           Config::System::LEAD_SCREW_PITCH,
+                                       limitSwitch->isTriggered() ? "TRIGGERED" : "clear");
+            Logger::getInstance().logln(F("-------------------------------"));
         }
     }
 
@@ -100,7 +102,7 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(statusTask, "Status Updates", Config::Tasks::STATUS_TASK_STACK_SIZE, this,
                                 Config::Tasks::STATUS_TASK_PRIORITY, &taskHandle, Config::Tasks::STATUS_TASK_CORE);
-        Serial.println(F("Status reporting task started"));
+        Logger::getInstance().logln(F("Status reporting task started"));
     }
 
 }  // namespace MotionSystem

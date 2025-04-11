@@ -1,7 +1,5 @@
 #include "Helper/CommandHandler.h"
-#include "Globals.h"
-#include "Helper/Utils.h"
-#include "Motion/MotionGlobals.h"
+
 namespace MotionSystem
 {
     const String CommandKey::CMD_MOVE        = "MOV";
@@ -47,26 +45,26 @@ namespace MotionSystem
 
     void CommandHandler::printCommandGuide()
     {
-        Serial.println("\n ==================== Available Commands ====================");
-        Serial.println("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
+        Logger::getInstance().logln("\n ==================== Available Commands ====================");
+        Logger::getInstance().logln("\nMovement Commands (example: motor 1 w - mean motor 1 will move forward):");
         for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
-            Serial.print("  motor x ");
-            Serial.print(commands[i].key);
-            Serial.print(" - ");
-            Serial.println(commands[i].description);
+            Logger::getInstance().log("  motor x ");
+            Logger::getInstance().log(commands[i].key);
+            Logger::getInstance().log(" - ");
+            Logger::getInstance().logln(commands[i].description);
         }
 
-        Serial.println("\nSystem Commands:");
+        Logger::getInstance().logln("\nSystem Commands:");
         for (size_t i = 0; i < NUM_COMMANDS; i++)
         {
-            Serial.print("  ");
-            Serial.print(commands[i].key);
-            Serial.print(" - ");
-            Serial.println(commands[i].description);
+            Logger::getInstance().log("  ");
+            Logger::getInstance().log(commands[i].key);
+            Logger::getInstance().log(" - ");
+            Logger::getInstance().logln(commands[i].description);
         }
 
-        Serial.println("\n ==================== End of Command Guide ====================\n> ");
+        Logger::getInstance().logln("\n ==================== End of Command Guide ====================\n> ");
     }
 
     const Command* CommandHandler::findCommand(String cmd) const
@@ -109,7 +107,7 @@ namespace MotionSystem
         else if (command == "RESET_LIMIT")
         {
             limitSwitch->reset();
-            Serial.println(F("Limit switch flag reset"));
+            Logger::getInstance().logln(F("Limit switch flag reset"));
         }
 
         else if (command == "RESET_POS")
@@ -119,7 +117,7 @@ namespace MotionSystem
 
         else
         {
-            Serial.println(F("Unknown command"));
+            Logger::getInstance().logln(F("Unknown command"));
         }*/
 
         if (motors[motorNum - 1].testCommunication(false))
@@ -127,80 +125,80 @@ namespace MotionSystem
             switch (type)
             {
                 case CommandType::MOTOR_MOVE:
-                    Serial.print(F("Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(" moving"));
+                    Logger::getInstance().log(F("Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(" moving"));
                     // motionController.moveToPosition(position);
 
                     break;
                 case CommandType::MOTOR_FORWARD:
-                    Serial.print(F("Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(" moving forward"));
+                    Logger::getInstance().log(F("Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(" moving forward"));
                     motors[motorNum - 1].moveForward();
                     break;
                 case CommandType::MOTOR_REVERSE:
-                    Serial.print(F("Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(" moving reverse"));
+                    Logger::getInstance().log(F("Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(" moving reverse"));
                     motors[motorNum - 1].moveReverse();
                     break;
                 case CommandType::MOTOR_STOP:
-                    Serial.print(F("Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(" stopped"));
+                    Logger::getInstance().log(F("Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(" stopped"));
                     motors[motorNum - 1].stop();
                     break;
                 case CommandType::DRIVER_RESET:
-                    Serial.print(F("Resetting driver for Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(": "));
+                    Logger::getInstance().log(F("Resetting driver for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
                     motors[motorNum - 1].resetDriverState();
                     break;
                 case CommandType::DRIVER_SPI_TEST:
-                    Serial.print(F("\nMotor "));
-                    Serial.print(motorNum);
-                    Serial.print(F(" - "));
+                    Logger::getInstance().log(F("\nMotor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().log(F(" - "));
                     motors[motorNum - 1].testCommunication();
                     break;
                 case CommandType::DRIVER_STATUS:
-                    Serial.print(F("\nDriver Status for Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(": "));
+                    Logger::getInstance().log(F("\nDriver Status for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
                     motors[motorNum - 1].printDriverStatus();
                     break;
                 case CommandType::DRIVER_CONFIG:
-                    Serial.print(F("\nDriver Configuration for Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(": "));
+                    Logger::getInstance().log(F("\nDriver Configuration for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
                     motors[motorNum - 1].printDriverConfig();
                     break;
                 case CommandType::TEMPERATURE:
-                    Serial.print(F("\nTemperature for Motor "));
-                    Serial.print(motorNum);
-                    Serial.print(F(": "));
+                    Logger::getInstance().log(F("\nTemperature for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().log(F(": "));
                     motors[motorNum - 1].printTemperature();
                     break;
                 case CommandType::MODE_TOGGLE:
-                    Serial.print(F("\nToggling mode for Motor "));
-                    Serial.print(motorNum);
-                    Serial.println(F(": "));
+                    Logger::getInstance().log(F("\nToggling mode for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
                     motors[motorNum - 1].toggleStealthChop();
                     break;
                 case CommandType::HELP:
                     printCommandGuide();
                     break;
                 default:
-                    Serial.println(F("Invalid command type ❌ "));
+                    Logger::getInstance().logln(F("Invalid command type ❌ "));
                     break;
             }
         }
 
         else
         {
-            Serial.print(F("\nMotor "));
-            Serial.print(motorNum);
-            Serial.println(F(" communication failed ❌ "));
+            Logger::getInstance().log(F("\nMotor "));
+            Logger::getInstance().log(String(motorNum));
+            Logger::getInstance().logln(F(" communication failed ❌ "));
         }
     }
 
@@ -230,9 +228,9 @@ namespace MotionSystem
         {
             if (!command)
             {
-                Serial.println(F("❌ Invalid command ["));
-                Serial.print(cmd);
-                Serial.println(F("]. Use h/? for help"));
+                Logger::getInstance().logln(F("❌ Invalid command ["));
+                Logger::getInstance().log(cmd);
+                Logger::getInstance().logln(F("]. Use h/? for help"));
                 return;
             }
 
@@ -244,9 +242,9 @@ namespace MotionSystem
 
         else if (secondWord != "" && thirdWord == "")
         {
-            Serial.println(F("❌ Invalid command ["));
-            Serial.print(cmd);
-            Serial.println(F("]. Use h/? for help"));
+            Logger::getInstance().logln(F("❌ Invalid command ["));
+            Logger::getInstance().log(cmd);
+            Logger::getInstance().logln(F("]. Use h/? for help"));
             return;
         }
 
@@ -260,8 +258,8 @@ namespace MotionSystem
 
                     if (!validateMotorNumber(motorNum))
                     {
-                        Serial.print(F(" ❌ Invalid motor number: "));
-                        Serial.print(motorNum);
+                        Logger::getInstance().log(F(" ❌ Invalid motor number: "));
+                        Logger::getInstance().log(String(motorNum));
                         return;
                     }
 
@@ -269,24 +267,24 @@ namespace MotionSystem
                 }
                 else
                 {
-                    Serial.println(F("❌ Invalid command ["));
-                    Serial.print(cmd);
-                    Serial.println(F("]. Use h/? for help"));
+                    Logger::getInstance().logln(F("❌ Invalid command ["));
+                    Logger::getInstance().log(cmd);
+                    Logger::getInstance().logln(F("]. Use h/? for help"));
                     return;
                 }
             }
             else
             {
-                Serial.println(F("❌ Invalid command ["));
-                Serial.print(cmd);
-                Serial.println(F("]. Use h/? for help"));
+                Logger::getInstance().logln(F("❌ Invalid command ["));
+                Logger::getInstance().log(cmd);
+                Logger::getInstance().logln(F("]. Use h/? for help"));
                 return;
             }
         }
 
         else
         {
-            Serial.println("Invalid command.");
+            Logger::getInstance().logln("Invalid command.");
         }
     }
 }  // namespace MotionSystem
