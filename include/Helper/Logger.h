@@ -6,6 +6,8 @@
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include <inttypes.h>  // For uint32_t and format specifiers
+#include <stdarg.h>
 #include <string.h>
 
 namespace MotionSystem
@@ -77,15 +79,25 @@ namespace MotionSystem
         void loglnDecAsHex(int32_t value, uint8_t digits = 8);
         void loglnDecAsHex(int64_t value, uint8_t digits = 16);
 
+        // Queue management and monitoring
+        bool     isQueueFull() const;
+        uint32_t getQueueSize() const;
+        uint32_t getQueueSpaces() const;
+        uint32_t getDroppedMessages() const;
+        void     clearQueue();
+        void     setQueueWarningThreshold(uint32_t threshold);
+        void     setQueueCriticalThreshold(uint32_t threshold);
+
     private:
         Logger();  // Private constructor
         ~Logger();
 
-        static constexpr size_t   BUFFER_SIZE        = 1024;  // Size of the circular buffer
-        static constexpr size_t   MAX_MESSAGE_LENGTH = 128;   // Maximum length of a single message
-        static constexpr uint32_t TASK_STACK_SIZE    = 4096;
-        static constexpr uint32_t TASK_PRIORITY      = 1;
-        static constexpr uint32_t TASK_DELAY_MS      = 10;
+        static const uint8_t  LOGGER_QUEUE_SIZE  = 64;
+        static const uint8_t  MAX_MESSAGE_LENGTH = 128;
+        static const uint16_t TASK_STACK_SIZE    = 2048;
+        static const uint8_t  TASK_PRIORITY      = 1;
+        static const uint16_t TASK_DELAY_MS      = 5;
+        static const uint16_t QUEUE_WAIT_MS      = 50;
 
         struct LogMessage
         {
@@ -95,15 +107,21 @@ namespace MotionSystem
         };
 
         QueueHandle_t     messageQueue;
-        TaskHandle_t      loggerTaskHandle;
+        TaskHandle_t      taskHandle;
         SemaphoreHandle_t mutex;
+        uint32_t          droppedMessages;
+        uint32_t          queueWarningThreshold;
+        uint32_t          queueCriticalThreshold;
+        bool              isCritical;
 
         static void loggerTask(void* parameter);
         void        processMessage(const LogMessage& msg);
-        void        sendMessage(const char* message, bool isFlashString, bool addNewline);
-        void        sendFormattedMessage(const char* format, bool isFlashString, bool addNewline, va_list args);
+        bool        sendMessage(const char* message, bool isFlashString, bool addNewline);
+        bool        sendFormattedMessage(const char* format, bool isFlashString, bool addNewline, va_list args);
         void        sendHexValue(uint64_t value, uint8_t digits, bool addNewline);
         void        sendDecAsHex(uint64_t value, uint8_t digits, bool addNewline);
+        void        checkQueueHealth();
+        void        handleCriticalState();
     };
 }  // namespace MotionSystem
 

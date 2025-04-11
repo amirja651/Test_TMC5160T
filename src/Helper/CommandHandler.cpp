@@ -184,10 +184,13 @@ namespace MotionSystem
             switch (type)
             {
                 case CommandType::MOTOR_RESET_LIMIT:
-                    Logger::getInstance().log(F("Resetting limit for Motor "));
-                    Logger::getInstance().log(String(motorNum));
-                    Logger::getInstance().logln(F(": "));
-                    limitSwitch.reset();
+                    if (motionController[motorNum - 1].getLimitSwitch() != nullptr)
+                    {
+                        Logger::getInstance().log(F("Resetting limit for Motor "));
+                        Logger::getInstance().log(String(motorNum));
+                        Logger::getInstance().logln(F(": "));
+                        motionController[motorNum - 1].getLimitSwitch()->reset();
+                    }
                     break;
                 case CommandType::MOTOR_RESET_POS:
                     Logger::getInstance().log(F("Resetting position for Motor "));
@@ -287,16 +290,8 @@ namespace MotionSystem
         return result;
     }
 
-    void CommandHandler::beginSerial(uint32_t baudRate)
-    {
-        Serial.begin(baudRate);
-        delay(System::STARTUP_DELAY_MS);
-        while (!Serial)
-        {
-            delay(10);
-        }
-
-        // Create serial task
+    void CommandHandler::begin()
+    {  // Create serial task
         xTaskCreate(serialTask, "SerialTask", 4096, this, 2, &serialTaskHandle);
     }
 

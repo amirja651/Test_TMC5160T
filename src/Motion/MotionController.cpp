@@ -34,13 +34,19 @@ namespace MotionSystem
         encoder->begin();
         motor->begin();
         pidController->init();
-        limitSwitch->init();
+
+        if (limitSwitch != nullptr)
+        {
+            limitSwitch->init();
+        }
+
         lastStepTime                    = esp_timer_get_time();
         EncoderPosition initialPosition = encoder->readPosition();
         setAbsoluteZeroPosition(initialPosition);
         setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
-        Logger::getInstance().logln(F("Motion controller initialized"));
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().logln(F(" - Motion controller initialized"));
     }
 
     void MotionController::moveToPosition(MicronPosition positionMicrons)
@@ -102,7 +108,8 @@ namespace MotionSystem
     {
         EncoderPosition currentPosition = encoder->readPosition();
         setRelativeZeroPosition(currentPosition);
-        Logger::getInstance().logln(F("Relative zero position reset at current position"));
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().logln(F(" - Relative zero position reset at current position"));
     }
 
     void MotionController::motionTask(void* parameter)
@@ -121,11 +128,12 @@ namespace MotionSystem
                 controller->printStatusUpdate();
             }
 
-            if (controller->limitSwitch->isEmergencyStop())
+            if (controller->limitSwitch != nullptr && controller->limitSwitch->isEmergencyStop())
             {
                 controller->currentSpeed = 0;
                 controller->limitSwitch->setEmergencyStop(false);  // Reset flag
-                Logger::getInstance().logln(F("EMERGENCY STOP: Limit switch triggered!"));
+                Logger::getInstance().log(controller->motor->getInstanceName());
+                Logger::getInstance().logln(F(" - EMERGENCY STOP: Limit switch triggered!"));
                 vTaskDelay(100);  // Give time for other tasks
                 continue;
             }
@@ -152,7 +160,7 @@ namespace MotionSystem
             controller->setCurrentSpeed(controller->currentSpeed);
             bool direction = controller->currentSpeed >= 0;
 
-            if (controller->limitSwitch->isTriggered())
+            if (controller->limitSwitch != nullptr && controller->limitSwitch->isTriggered())
             {
                 if (!direction)
                 {                                  // Moving toward limit switch (negative direction)
@@ -183,7 +191,8 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(motionTask, "Motion Control", Tasks::MOTION_TASK_STACK_SIZE, this,
                                 Tasks::MOTION_TASK_PRIORITY, &taskHandle, Tasks::MOTION_TASK_CORE);
-        Logger::getInstance().logln(F("Motion control task started"));
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().logln(F(" - Motion control task started"));
     }
 
     void MotionController::setCurrentSpeed(Speed speed)
@@ -209,6 +218,7 @@ namespace MotionSystem
 
         if (motorFrequency > 10 || showStatus)
         {
+            Logger::getInstance().logln(motor->getInstanceName());
             Logger::getInstance().logf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n",
                                        relPosition, abs(relTravelPercent), System::REL_TRAVEL_LIMIT_MM, relTarget,
                                        error);
@@ -220,7 +230,8 @@ namespace MotionSystem
                 "Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
                 (motorFrequency / (System::STEPS_PER_REV * System::MICROSTEPS)) * System::LEAD_SCREW_PITCH,
 
-                limitSwitch->isTriggered() ? "TRIGGERED" : "clear");
+                limitSwitch != nullptr ? limitSwitch->isTriggered() ? "TRIGGERED" : "clear" : "NONE");
+
             Logger::getInstance().logln(F("-------------------------------"));
         }
     }
@@ -250,6 +261,11 @@ namespace MotionSystem
     Types::EncoderPosition MotionController::getRelativeZeroPosition() const
     {
         return relativeZeroPosition;
+    }
+
+    LimitSwitch* MotionController::getLimitSwitch() const
+    {
+        return limitSwitch;
     }
 
 }  // namespace MotionSystem

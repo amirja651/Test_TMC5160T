@@ -40,62 +40,25 @@ EncoderInterface* pwmEncoders[System::NUM_PWM_ENCODERS] = {
     EncoderFactory::createEncoder(EncoderFactory::EncoderType::PWM, pwmEncoderConfig[2]),
     EncoderFactory::createEncoder(EncoderFactory::EncoderType::PWM, pwmEncoderConfig[3])};
 
-/*
-// Create encoder configurations
-EncoderConfig diffEncoderConfig = EncoderFactory::createDifferentialConfig(
-    Config::Pins::ENCODER_A_PIN, Config::Pins::ENCODER_B_PIN, 0);
-
-// Create encoders using factory
-EncoderInterface* diffEncoder = EncoderFactory::createEncoder(
-    EncoderFactory::EncoderType::DIFFERENTIAL, diffEncoderConfig);
-
-void initializeDiffEncoders()
-{
-    diffEncoder->begin();
-}
-*/
-
-// Define global instances
-LimitSwitch limitSwitch;
-
-PIDController pidController[System::NUM_MOTORS] = {PIDController(pwmEncoders[0]), PIDController(pwmEncoders[1]),
-                                                   PIDController(pwmEncoders[2]), PIDController(pwmEncoders[3])};
+PIDController pidController[System::NUM_MOTORS] = {
+    PIDController("PID 1", pwmEncoders[0]), PIDController("PID 2", pwmEncoders[1]),
+    PIDController("PID 3", pwmEncoders[2]), PIDController("PID 4", pwmEncoders[3])};
 
 MotionController motionController[System::NUM_MOTORS] = {
-    MotionController(pwmEncoders[0], &motors[0], &pidController[0], &limitSwitch),
-    MotionController(pwmEncoders[1], &motors[1], &pidController[1], &limitSwitch),
-    MotionController(pwmEncoders[2], &motors[2], &pidController[2], &limitSwitch),
-    MotionController(pwmEncoders[3], &motors[3], &pidController[3], &limitSwitch)};
-
-void initializeMotors()
-{
-    for (uint8_t i = 0; i < System::NUM_MOTORS; i++)
-    {
-        motors[i].begin();
-    }
-}
-
-void initializePWMEncoders()
-{
-    for (uint8_t i = 0; i < System::NUM_PWM_ENCODERS; i++)
-    {
-        pwmEncoders[i]->begin();
-    }
-}
+    MotionController(pwmEncoders[0], &motors[0], &pidController[0], nullptr),
+    MotionController(pwmEncoders[1], &motors[1], &pidController[1], nullptr),
+    MotionController(pwmEncoders[2], &motors[2], &pidController[2], nullptr),
+    MotionController(pwmEncoders[3], &motors[3], &pidController[3], nullptr)};
 
 void initializeMotionSystem()
 {
-    limitSwitch.init();
+    // limitSwitch.init();
 
     for (uint8_t i = 0; i < System::NUM_MOTORS; i++)
     {
         // Initialize components in the correct order
-        pidController[i].init();
         motionController[i].begin();
         motionController[i].startTask();
-
-        Logger::getInstance().log(F("Motion system initialized for motor "));
-        Logger::getInstance().logln(String(i + 1));
     }
 }
 
@@ -103,15 +66,13 @@ auto& commandHandler = CommandHandler::getInstance();
 
 void setup()
 {
-    commandHandler.beginSerial();
-
     Logger::getInstance().begin();
 
     Logger::getInstance().logln(
         F("\n ==================== Initializing High Precision Motion Control System ===================="));
 
-    initializeMotors();
-    initializePWMEncoders();
+    commandHandler.begin();
+
     initializeMotionSystem();
 
     CommandHandler::getInstance().printCommandGuide();

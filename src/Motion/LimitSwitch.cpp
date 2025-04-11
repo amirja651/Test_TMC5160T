@@ -1,8 +1,10 @@
 #include "Motion/LimitSwitch.h"
 #include "Helper/Pins.h"
+
 namespace MotionSystem
 {
     static LimitSwitch* limitSwitchInstance = nullptr;
+
     LimitSwitch::LimitSwitch() : triggered(false), emergencyStop(false)
     {
         limitSwitchInstance = this;
@@ -20,9 +22,11 @@ namespace MotionSystem
     void LimitSwitch::init()
     {
         pinMode(Pins::LimitSwitch::LIMIT_SWITCH_PIN, INPUT_PULLUP);
+
         attachInterrupt(
             digitalPinToInterrupt(Pins::LimitSwitch::LIMIT_SWITCH_PIN), []() { LimitSwitch::limitSwitchISR(nullptr); },
             FALLING);
+
         Logger::getInstance().log(F("Limit switch configured on pin "));
         Logger::getInstance().logln(String(Pins::LimitSwitch::LIMIT_SWITCH_PIN));
     }

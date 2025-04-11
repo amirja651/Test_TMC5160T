@@ -29,7 +29,7 @@ namespace MotionSystem
     {
     public:
         MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
-                         LimitSwitch* limitSwitch);
+                         LimitSwitch* limitSwitch = nullptr);
         ~MotionController();
         void                   begin();
         void                   moveToPosition(Types::MicronPosition positionMicrons);
@@ -46,6 +46,7 @@ namespace MotionSystem
         Types::MicronPosition  getAbsolutePosition();
         Types::MicronPosition  getRelativePosition();
         Types::EncoderPosition getRelativeZeroPosition() const;
+        LimitSwitch*           getLimitSwitch() const;
 
     private:
         EncoderInterface*      encoder;

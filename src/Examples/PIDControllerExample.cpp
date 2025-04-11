@@ -10,7 +10,7 @@ using namespace MotionSystem;
 // Create instances with static to prevent multiple definitions
 static EncoderConfig pwmEncoderConfigTest = EncoderFactory::createPWMConfig(35, 35);
 static PWMEncoder    encoderTest(pwmEncoderConfigTest);
-static PIDController pidControllerTest(&encoderTest);
+static PIDController pidControllerTest("PID 1", &encoderTest);
 
 void setup1()
 {

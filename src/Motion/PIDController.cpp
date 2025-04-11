@@ -4,8 +4,9 @@
 
 namespace MotionSystem
 {
-    PIDController::PIDController(EncoderInterface* encoder)
+    PIDController::PIDController(const char* name, EncoderInterface* encoder)
         : encoder(encoder),
+          instanceName(name),
           targetPosition(0),
           lastEncoderPosition(0),
           integral(0),
@@ -42,19 +43,22 @@ namespace MotionSystem
     {
         if (kp < 0 || ki < 0 || kd < 0)
         {
-            Logger::getInstance().logln(F("ERROR: Invalid PID gains"));
+            Logger::getInstance().log(instanceName);
+            Logger::getInstance().logln(F(" - ERROR: Invalid PID gains"));
             return false;
         }
 
         if (maxIntegral <= 0)
         {
-            Logger::getInstance().logln(F("ERROR: Invalid integral limit"));
+            Logger::getInstance().log(instanceName);
+            Logger::getInstance().logln(F(" - ERROR: Invalid integral limit"));
             return false;
         }
 
         if (maxOutput <= 0)
         {
-            Logger::getInstance().logln(F("ERROR: Invalid output limit"));
+            Logger::getInstance().log(instanceName);
+            Logger::getInstance().logln(F(" - ERROR: Invalid output limit"));
             return false;
         }
 
@@ -65,13 +69,15 @@ namespace MotionSystem
     {
         if (!encoder)
         {
-            Logger::getInstance().logln(F("ERROR: Encoder not initialized"));
+            Logger::getInstance().log(instanceName);
+            Logger::getInstance().logln(F(" - ERROR: Encoder not initialized"));
             return;
         }
 
         if (!validateConfig())
         {
-            Logger::getInstance().logln(F("ERROR: Invalid PID configuration"));
+            Logger::getInstance().log(instanceName);
+            Logger::getInstance().logln(F(" - ERROR: Invalid PID configuration"));
             return;
         }
 
@@ -80,8 +86,9 @@ namespace MotionSystem
 
         // Single log call for better performance
         char logBuffer[128];
-        snprintf(logBuffer, sizeof(logBuffer), "PID controller initialized with parameters KP:%.2f KI:%.2f KD:%.2f", kp,
-                 ki, kd);
+        snprintf(logBuffer, sizeof(logBuffer), " - PID controller initialized with parameters KP:%.2f KI:%.2f KD:%.2f",
+                 kp, ki, kd);
+        Logger::getInstance().log(instanceName);
         Logger::getInstance().logln(logBuffer);
     }
 
@@ -219,7 +226,8 @@ namespace MotionSystem
         xTaskCreatePinnedToCore(pidTask, "PID Control", Tasks::PID_TASK_STACK_SIZE, this, Tasks::PID_TASK_PRIORITY,
                                 &taskHandle, Tasks::PID_TASK_CORE);
 
-        Logger::getInstance().logln(F("PID control task started"));
+        Logger::getInstance().log(instanceName);
+        Logger::getInstance().logln(F(" - PID control task started"));
     }
 
     void PIDController::stopTask()

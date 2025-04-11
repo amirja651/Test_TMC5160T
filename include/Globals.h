@@ -18,9 +18,6 @@ extern MotionSystem::LimitSwitch       limitSwitch;
 extern MotionSystem::PIDController     pidController[MotionSystem::System::NUM_MOTORS];
 extern MotionSystem::MotionController  motionController[MotionSystem::System::NUM_MOTORS];
 
-void initializeMotors();
-void initializePWMEncoders();
-void initializeDiffEncoders();
 void initializeMotionSystem();
 
 #endif  // GLOBAL_INSTANCES_H

@@ -1,56 +1,168 @@
 #include "Helper/Logger.h"
+#include <inttypes.h>  // For PRIu32 and other format specifiers
+#include "Helper/System.h"
 
 namespace MotionSystem
 {
-    Logger::Logger() : messageQueue(nullptr), loggerTaskHandle(nullptr), mutex(nullptr) {}
+    Logger::Logger()
+        : messageQueue(nullptr),
+          taskHandle(nullptr),
+          mutex(nullptr),
+          droppedMessages(0),
+          queueWarningThreshold(50),   // 50% of queue size
+          queueCriticalThreshold(75),  // 75% of queue size
+          isCritical(false)
+    {
+    }
 
     Logger::~Logger()
     {
-        if (loggerTaskHandle != nullptr)
+        if (taskHandle != nullptr)
         {
-            vTaskDelete(loggerTaskHandle);
+            vTaskDelete(taskHandle);
+            taskHandle = nullptr;
         }
         if (messageQueue != nullptr)
         {
             vQueueDelete(messageQueue);
+            messageQueue = nullptr;
         }
         if (mutex != nullptr)
         {
             vSemaphoreDelete(mutex);
+            mutex = nullptr;
         }
     }
 
     void Logger::begin()
     {
-        // Create message queue
-        messageQueue = xQueueCreate(BUFFER_SIZE, sizeof(LogMessage));
-        if (messageQueue == nullptr)
+        // Initialize Serial first
+        Serial.begin(System::SERIAL_BAUD_RATE);
+        delay(System::STARTUP_DELAY_MS);
+        while (!Serial)
         {
-            Serial.println(F("Failed to create logger message queue"));
-            return;
+            delay(10);
         }
 
-        // Create mutex
+        // Create mutex first
         mutex = xSemaphoreCreateMutex();
         if (mutex == nullptr)
         {
-            Serial.println(F("Failed to create logger mutex"));
-            return;
+            Serial.println("ERROR: Failed to create logger mutex");
+            while (1)
+            {
+                delay(1000);
+            }
+        }
+
+        // Create message queue
+        messageQueue = xQueueCreate(LOGGER_QUEUE_SIZE, sizeof(LogMessage));
+        if (messageQueue == nullptr)
+        {
+            Serial.println("ERROR: Failed to create logger message queue");
+            while (1)
+            {
+                delay(1000);
+            }
         }
 
         // Create logger task
-        xTaskCreate(loggerTask, "LoggerTask", TASK_STACK_SIZE, this, TASK_PRIORITY, &loggerTaskHandle);
-        if (loggerTaskHandle == nullptr)
+        BaseType_t taskCreated =
+            xTaskCreatePinnedToCore(loggerTask, "LoggerTask", TASK_STACK_SIZE, this, TASK_PRIORITY, &taskHandle,
+                                    0);  // Run on core 0
+
+        if (taskCreated != pdPASS)
         {
-            Serial.println(F("Failed to create logger task"));
-            return;
+            Serial.println("ERROR: Failed to create logger task");
+            while (1)
+            {
+                delay(1000);
+            }
+        }
+
+        // Wait for task to start
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    bool Logger::isQueueFull() const
+    {
+        return uxQueueSpacesAvailable(messageQueue) == 0;
+    }
+
+    uint32_t Logger::getQueueSize() const
+    {
+        return uxQueueMessagesWaiting(messageQueue);
+    }
+
+    uint32_t Logger::getQueueSpaces() const
+    {
+        return uxQueueSpacesAvailable(messageQueue);
+    }
+
+    uint32_t Logger::getDroppedMessages() const
+    {
+        return droppedMessages;
+    }
+
+    void Logger::setQueueWarningThreshold(uint32_t threshold)
+    {
+        queueWarningThreshold = threshold;
+    }
+
+    void Logger::setQueueCriticalThreshold(uint32_t threshold)
+    {
+        queueCriticalThreshold = threshold;
+    }
+
+    void Logger::clearQueue()
+    {
+        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+        {
+            xQueueReset(messageQueue);
+            isCritical = false;
+            xSemaphoreGive(mutex);
         }
     }
 
-    void Logger::sendMessage(const char* message, bool isFlashString, bool addNewline)
+    void Logger::checkQueueHealth()
+    {
+        uint32_t currentSize   = getQueueSize();
+        uint32_t queueCapacity = LOGGER_QUEUE_SIZE;
+        uint32_t usagePercent  = (currentSize * 100) / queueCapacity;
+
+        if (usagePercent >= queueCriticalThreshold && !isCritical)
+        {
+            isCritical = true;
+            handleCriticalState();
+        }
+        else if (usagePercent < queueCriticalThreshold)
+        {
+            isCritical = false;
+        }
+    }
+
+    void Logger::handleCriticalState()
+    {
+        char warning[128];
+        snprintf(warning, sizeof(warning),
+                 "CRITICAL: Logger queue at %" PRIu32 "%% capacity (%" PRIu32 "/%" PRIu32 " messages)",
+                 (getQueueSize() * 100) / LOGGER_QUEUE_SIZE, getQueueSize(), LOGGER_QUEUE_SIZE);
+
+        // Try to send critical warning
+        if (xQueueSend(messageQueue, &warning, pdMS_TO_TICKS(QUEUE_WAIT_MS)) != pdPASS)
+        {
+            // If we can't send the warning, clear the queue and try again
+            clearQueue();
+            xQueueSend(messageQueue, &warning, 0);
+        }
+    }
+
+    bool Logger::sendMessage(const char* message, bool isFlashString, bool addNewline)
     {
         if (messageQueue == nullptr)
-            return;
+            return false;
+
+        checkQueueHealth();
 
         LogMessage logMsg;
         if (isFlashString)
@@ -65,17 +177,44 @@ namespace MotionSystem
         logMsg.isFlashString                   = isFlashString;
         logMsg.addNewline                      = addNewline;
 
-        if (xQueueSend(messageQueue, &logMsg, 0) != pdTRUE)
+        // Try to send immediately
+        if (xQueueSend(messageQueue, &logMsg, 0) == pdPASS)
         {
-            // Queue is full, drop the message
-            Serial.println(F("Logger queue is full, message dropped"));
+            return true;
         }
+
+        // If queue is full, wait for a short time
+        if (xQueueSend(messageQueue, &logMsg, pdMS_TO_TICKS(QUEUE_WAIT_MS)) == pdPASS)
+        {
+            return true;
+        }
+
+        // If still can't send, increment dropped messages counter
+        droppedMessages++;
+
+        // Log warning only every 100 dropped messages to avoid flooding
+        if (droppedMessages % 100 == 0)
+        {
+            char warning[64];
+            snprintf(warning, sizeof(warning),
+                     "WARNING: %" PRIu32 " messages dropped (Queue full, %" PRIu32 "%% capacity)", droppedMessages,
+                     (getQueueSize() * 100) / LOGGER_QUEUE_SIZE);
+
+            if (xQueueSend(messageQueue, &warning, pdMS_TO_TICKS(QUEUE_WAIT_MS)) != pdPASS)
+            {
+                // If we can't even log the warning, clear the queue and try again
+                clearQueue();
+                xQueueSend(messageQueue, &warning, 0);
+            }
+        }
+
+        return false;
     }
 
-    void Logger::sendFormattedMessage(const char* format, bool isFlashString, bool addNewline, va_list args)
+    bool Logger::sendFormattedMessage(const char* format, bool isFlashString, bool addNewline, va_list args)
     {
         if (messageQueue == nullptr)
-            return;
+            return false;
 
         LogMessage logMsg;
         if (isFlashString)
@@ -89,11 +228,21 @@ namespace MotionSystem
         logMsg.isFlashString = isFlashString;
         logMsg.addNewline    = addNewline;
 
-        if (xQueueSend(messageQueue, &logMsg, 0) != pdTRUE)
+        // Try to send immediately
+        if (xQueueSend(messageQueue, &logMsg, 0) == pdPASS)
         {
-            // Queue is full, drop the message
-            Serial.println(F("Logger queue is full, message dropped"));
+            return true;
         }
+
+        // If queue is full, wait for a short time
+        if (xQueueSend(messageQueue, &logMsg, pdMS_TO_TICKS(QUEUE_WAIT_MS)) == pdPASS)
+        {
+            return true;
+        }
+
+        // If still can't send, increment dropped messages counter
+        droppedMessages++;
+        return false;
     }
 
     void Logger::sendHexValue(uint64_t value, uint8_t digits, bool addNewline)
@@ -362,48 +511,48 @@ namespace MotionSystem
         sendDecAsHex(static_cast<uint64_t>(value), digits, true);
     }
 
+    void Logger::processMessage(const LogMessage& msg)
+    {
+        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+        {
+            if (msg.isFlashString)
+            {
+                if (msg.addNewline)
+                {
+                    Serial.println(F(msg.message));
+                }
+                else
+                {
+                    Serial.print(F(msg.message));
+                }
+            }
+            else
+            {
+                if (msg.addNewline)
+                {
+                    Serial.println(msg.message);
+                }
+                else
+                {
+                    Serial.print(msg.message);
+                }
+            }
+            xSemaphoreGive(mutex);
+        }
+    }
+
     void Logger::loggerTask(void* parameter)
     {
         Logger*    logger = static_cast<Logger*>(parameter);
         LogMessage msg;
 
-        while (1)
+        while (true)
         {
-            if (xQueueReceive(logger->messageQueue, &msg, portMAX_DELAY) == pdTRUE)
+            if (xQueueReceive(logger->messageQueue, &msg, portMAX_DELAY) == pdPASS)
             {
-                if (xSemaphoreTake(logger->mutex, portMAX_DELAY) == pdTRUE)
-                {
-                    logger->processMessage(msg);
-                    xSemaphoreGive(logger->mutex);
-                }
+                logger->processMessage(msg);
             }
             vTaskDelay(pdMS_TO_TICKS(TASK_DELAY_MS));
-        }
-    }
-
-    void Logger::processMessage(const LogMessage& msg)
-    {
-        if (msg.isFlashString)
-        {
-            if (msg.addNewline)
-            {
-                Serial.println(F(msg.message));
-            }
-            else
-            {
-                Serial.print(F(msg.message));
-            }
-        }
-        else
-        {
-            if (msg.addNewline)
-            {
-                Serial.println(msg.message);
-            }
-            else
-            {
-                Serial.print(msg.message);
-            }
         }
     }
 }  // namespace MotionSystem

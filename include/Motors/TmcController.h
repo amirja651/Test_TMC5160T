@@ -62,6 +62,7 @@ namespace MotionSystem
         uint32_t            calculateStepInterval(Types::Speed speed);
         Types::StepPosition micronsToSteps(Types::MicronPosition microns);
         Types::StepPosition pixelsToSteps(Types::PixelPosition pixels);
+        String              getInstanceName();
 
     private:
         void           configureDriver();                       // Configure driver parameters

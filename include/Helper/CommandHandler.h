@@ -83,7 +83,7 @@ namespace MotionSystem
 
         bool validateCommandFormat(const String& cmd) const;
 
-        void beginSerial(uint32_t baudRate = System::SERIAL_BAUD_RATE);
+        void begin();
 
         bool processSerialInput();
 

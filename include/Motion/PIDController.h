@@ -31,7 +31,7 @@ namespace MotionSystem
     class PIDController
     {
     public:
-        PIDController(EncoderInterface* encoder);
+        PIDController(const char* name, EncoderInterface* encoder);
         ~PIDController();
 
         // Core functionality
@@ -57,6 +57,7 @@ namespace MotionSystem
 
     private:
         EncoderInterface*      encoder;
+        const char*            instanceName;
         Types::EncoderPosition targetPosition;
         Types::EncoderPosition lastEncoderPosition;
         float                  integral;
