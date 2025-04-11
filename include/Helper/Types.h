@@ -28,6 +28,15 @@ namespace MotionSystem
             CALIBRATION_FAILED,
             TIMEOUT
         };
+
+        enum class MotionState
+        {
+            IDLE,
+            ACCELERATING,
+            CRUISING,
+            DECELERATING,
+            ERROR
+        };
     }  // namespace Types
 }  // namespace MotionSystem
 

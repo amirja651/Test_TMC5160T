@@ -16,7 +16,11 @@ namespace MotionSystem
           limitSwitch(limitSwitch),
           currentSpeed(0),
           lastStepTime(0),
-          taskHandle(nullptr)
+          lastEmergencyCheck(0),
+          currentState(Types::MotionState::IDLE),
+          taskHandle(nullptr),
+          absoluteZeroPosition(0),
+          relativeZeroPosition(0)
     {
     }
 
@@ -40,13 +44,302 @@ namespace MotionSystem
             limitSwitch->init();
         }
 
-        lastStepTime                    = esp_timer_get_time();
+        lastStepTime       = esp_timer_get_time();
+        lastEmergencyCheck = lastStepTime;
+        currentState       = MotionState::IDLE;
+
         EncoderPosition initialPosition = encoder->readPosition();
         setAbsoluteZeroPosition(initialPosition);
         setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
+
         Logger::getInstance().log(motor->getInstanceName());
         Logger::getInstance().logln(F(" - Motion controller initialized"));
+    }
+
+    void MotionController::handleEmergencyStop()
+    {
+        currentSpeed = 0;
+        limitSwitch->setEmergencyStop(false);
+        currentState = MotionState::ERROR;
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().logln(F(" - EMERGENCY STOP: Limit switch triggered!"));
+        lastEmergencyCheck = esp_timer_get_time();
+    }
+
+    void MotionController::updateStatus()
+    {
+        Types::MicronPosition relPosition = getRelativePosition();
+        Types::MicronPosition relTarget =
+            Utils::getInstance().countsToMicrons(pidController->getTargetPosition() - relativeZeroPosition);
+
+        if (abs(relPosition - relTarget) > 0.2)
+        {
+            printStatusUpdate();
+        }
+    }
+
+    void MotionController::updateSpeed(float desiredSpeed, float maxSpeedChange)
+    {
+        if (desiredSpeed > currentSpeed + maxSpeedChange)
+        {
+            currentSpeed += maxSpeedChange;
+            currentState = MotionState::ACCELERATING;
+        }
+        else if (desiredSpeed < currentSpeed - maxSpeedChange)
+        {
+            currentSpeed -= maxSpeedChange;
+            currentState = MotionState::DECELERATING;
+        }
+        else
+        {
+            currentSpeed = desiredSpeed;
+            currentState = (abs(currentSpeed) < 0.1f) ? MotionState::IDLE : MotionState::CRUISING;
+        }
+        setCurrentSpeed(currentSpeed);
+    }
+
+    bool MotionController::checkDirectionAndLimits()
+    {
+        bool newDirection = currentSpeed >= 0;
+
+        if (limitSwitch != nullptr && limitSwitch->isTriggered() && !newDirection)
+        {
+            currentSpeed = 0;
+            currentState = Types::MotionState::IDLE;
+            return false;
+        }
+
+        // Only set direction if it has changed
+        if (motor->getDirection() != newDirection)
+        {
+            motor->setDirection(newDirection);
+        }
+
+        return true;
+    }
+
+    void MotionController::handleStepping(uint64_t currentTime)
+    {
+        uint32_t stepInterval = motor->calculateStepInterval(currentSpeed);
+
+        if (stepInterval > 0 && (currentTime - lastStepTime) >= stepInterval)
+        {
+            motor->step();
+            lastStepTime = currentTime;
+            profileMotion();
+        }
+    }
+
+    uint32_t MotionController::calculateNextStepTime()
+    {
+        uint32_t stepInterval = motor->calculateStepInterval(currentSpeed);
+        if (stepInterval == 0)
+            return MIN_TASK_DELAY;
+
+        uint64_t nextStep = lastStepTime + stepInterval;
+        uint64_t now      = esp_timer_get_time();
+
+        if (nextStep > now)
+        {
+            return (nextStep - now) / 1000;  // Convert to milliseconds
+        }
+        return MIN_TASK_DELAY;
+    }
+
+    void MotionController::handleError(MotionError error)
+    {
+        static uint32_t lastErrorTime = 0;
+        uint32_t        currentTime   = millis();
+
+        // Prevent error spam
+        if (currentTime - lastErrorTime < 1000)  // 1 second cooldown
+        {
+            return;
+        }
+        lastErrorTime = currentTime;
+
+        currentSpeed = 0;
+        motor->enableDriver(false);
+        currentState = Types::MotionState::ERROR;
+
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().log(F(" - ERROR: "));
+
+        switch (error)
+        {
+            case MotionError::PID_ERROR:
+                Logger::getInstance().logln(F("PID controller error detected"));
+                // Attempt to reset PID controller
+                pidController->init();
+                break;
+
+            case MotionError::LIMIT_SWITCH_TRIGGERED:
+                Logger::getInstance().logln(F("Limit switch triggered"));
+                break;
+
+            case MotionError::ENCODER_ERROR:
+                Logger::getInstance().logln(F("Encoder error detected"));
+                // Attempt to reinitialize encoder
+                encoder->begin();
+                break;
+
+            case MotionError::MOTOR_ERROR:
+                Logger::getInstance().logln(F("Motor error detected"));
+                // Attempt to reset motor
+                motor->resetDriverState();
+                break;
+
+            default:
+                Logger::getInstance().logln(F("Unknown error detected"));
+                break;
+        }
+
+        // Attempt recovery after a short delay
+        vTaskDelay(pdMS_TO_TICKS(100));
+        motor->enableDriver(true);
+        currentState = Types::MotionState::IDLE;
+    }
+
+    void MotionController::profileMotion()
+    {
+        static uint32_t stepCount       = 0;
+        static uint64_t lastProfileTime = 0;
+
+        uint64_t now = esp_timer_get_time();
+        if (now - lastProfileTime >= PROFILE_INTERVAL)
+        {
+            float actualSpeed = (stepCount * 1000000.0f) / (now - lastProfileTime);
+            Logger::getInstance().logf("Motion Profile - Steps/sec: %.1f, State: %d\n", actualSpeed,
+                                       static_cast<int>(currentState));
+            stepCount       = 0;
+            lastProfileTime = now;
+        }
+        stepCount++;
+    }
+
+    void MotionController::updateMotionState()
+    {
+        Types::MicronPosition relPosition = getRelativePosition();
+        Types::MicronPosition relTarget =
+            Utils::getInstance().countsToMicrons(pidController->getTargetPosition() - relativeZeroPosition);
+        float positionError = abs(relTarget - relPosition);
+
+        if (positionError < 0.1f && abs(currentSpeed) < 0.1f)
+        {
+            currentState = MotionState::IDLE;
+        }
+        else if (abs(currentSpeed) < Motion::MAX_SPEED * 0.95f)
+        {
+            currentState = MotionState::ACCELERATING;
+        }
+        else
+        {
+            currentState = MotionState::CRUISING;
+        }
+    }
+
+    void MotionController::motionTask(void* parameter)
+    {
+        MotionController* controller   = static_cast<MotionController*>(parameter);
+        controller->lastStepTime       = esp_timer_get_time();
+        controller->lastEmergencyCheck = controller->lastStepTime;
+
+        // Pre-calculate constants
+        const float    maxSpeedChange        = Motion::ACCELERATION / Motion::MOTION_UPDATE_FREQ;
+        const uint32_t statusUpdateThreshold = 1000;  // Update every 1ms
+        uint32_t       lastStatusUpdate      = 0;
+        uint32_t       lastPIDUpdate         = 0;
+        const uint32_t PID_TIMEOUT           = 100;  // 100ms timeout for PID updates
+
+        while (true)
+        {
+            uint64_t currentTime = esp_timer_get_time();
+
+            // Emergency stop check with debounce
+            if (controller->limitSwitch != nullptr && controller->limitSwitch->isEmergencyStop() &&
+                (currentTime - controller->lastEmergencyCheck) > EMERGENCY_DEBOUNCE_TIME)
+            {
+                controller->handleEmergencyStop();
+                continue;
+            }
+
+            // Check for PID timeout
+            if (currentTime - lastPIDUpdate > PID_TIMEOUT * 1000)
+            {
+                controller->handleError(MotionError::PID_ERROR);
+                lastPIDUpdate = currentTime;
+                continue;
+            }
+
+            // Optimize status updates
+            if ((currentTime - lastStatusUpdate) > statusUpdateThreshold)
+            {
+                controller->updateStatus();
+                lastStatusUpdate = currentTime;
+            }
+
+            // PID control with anti-windup
+            int32_t pidOutput = controller->pidController->update();
+            lastPIDUpdate     = currentTime;
+
+            // Check for PID output validity
+            if (pidOutput == INT32_MIN || pidOutput == INT32_MAX)
+            {
+                controller->handleError(MotionError::PID_ERROR);
+                continue;
+            }
+
+            float desiredSpeed = constrain(pidOutput, -Motion::MAX_SPEED, Motion::MAX_SPEED);
+
+            // Optimized speed ramping
+            controller->updateSpeed(desiredSpeed, maxSpeedChange);
+
+            // Direction and limit switch check
+            if (!controller->checkDirectionAndLimits())
+            {
+                continue;
+            }
+
+            // Optimized step timing
+            controller->handleStepping(currentTime);
+
+            // Update motion state
+            controller->updateMotionState();
+
+            // Adaptive task delay with minimum delay
+            uint32_t nextStepTime = controller->calculateNextStepTime();
+            if (nextStepTime > MIN_TASK_DELAY)
+            {
+                vTaskDelay(pdMS_TO_TICKS(nextStepTime));
+            }
+            else
+            {
+                vTaskDelay(pdMS_TO_TICKS(MIN_TASK_DELAY));
+            }
+        }
+    }
+
+    void MotionController::startTask()
+    {
+        const UBaseType_t taskPriority = configMAX_PRIORITIES - 1;  // Highest priority
+        xTaskCreatePinnedToCore(motionTask, "Motion Control", Tasks::MOTION_TASK_STACK_SIZE, this, taskPriority,
+                                &taskHandle, Tasks::MOTION_TASK_CORE);
+        Logger::getInstance().log(motor->getInstanceName());
+        Logger::getInstance().logln(F(" - Motion control task started"));
+    }
+
+    void MotionController::stopTask()
+    {
+        if (taskHandle != nullptr)
+        {
+            vTaskDelete(taskHandle);
+            taskHandle   = nullptr;
+            currentSpeed = 0;
+            currentState = MotionState::IDLE;
+            Logger::getInstance().log(motor->getInstanceName());
+            Logger::getInstance().logln(F(" - Motion control task stopped"));
+        }
     }
 
     void MotionController::moveToPosition(MicronPosition positionMicrons)
@@ -112,89 +405,6 @@ namespace MotionSystem
         Logger::getInstance().logln(F(" - Relative zero position reset at current position"));
     }
 
-    void MotionController::motionTask(void* parameter)
-    {
-        MotionController* controller = static_cast<MotionController*>(parameter);
-        controller->lastStepTime     = esp_timer_get_time();
-
-        while (true)
-        {
-            if (controller->limitSwitch != nullptr && controller->limitSwitch->isEmergencyStop())
-            {
-                controller->currentSpeed = 0;
-                controller->limitSwitch->setEmergencyStop(false);  // Reset flag
-                Logger::getInstance().log(controller->motor->getInstanceName());
-                Logger::getInstance().logln(F(" - EMERGENCY STOP: Limit switch triggered!"));
-                vTaskDelay(100);  // Give time for other tasks
-                continue;
-            }
-
-            Types::MicronPosition relPosition = controller->getRelativePosition();
-            Types::MicronPosition relTarget   = Utils::getInstance().countsToMicrons(
-                controller->pidController->getTargetPosition() - controller->relativeZeroPosition);
-
-            if (abs(relPosition - relTarget) > 0.2)
-            {
-                controller->printStatusUpdate();
-            }
-
-            int32_t pidOutput      = controller->pidController->update();
-            float   desiredSpeed   = constrain(pidOutput, -Motion::MAX_SPEED, Motion::MAX_SPEED);
-            float   maxSpeedChange = Motion::ACCELERATION / Motion::MOTION_UPDATE_FREQ;
-
-            if (desiredSpeed > controller->currentSpeed + maxSpeedChange)
-            {
-                controller->currentSpeed += maxSpeedChange;
-            }
-
-            else if (desiredSpeed < controller->currentSpeed - maxSpeedChange)
-            {
-                controller->currentSpeed -= maxSpeedChange;
-            }
-
-            else
-            {
-                controller->currentSpeed = desiredSpeed;
-            }
-
-            controller->setCurrentSpeed(controller->currentSpeed);
-            bool direction = controller->currentSpeed >= 0;
-
-            if (controller->limitSwitch != nullptr && controller->limitSwitch->isTriggered())
-            {
-                if (!direction)
-                {                                  // Moving toward limit switch (negative direction)
-                    controller->currentSpeed = 0;  // Stop motion in this direction
-                    continue;
-                }
-            }
-
-            controller->motor->setDirection(direction);
-
-            uint32_t stepInterval = controller->motor->calculateStepInterval(controller->currentSpeed);
-
-            if (stepInterval > 0)
-            {
-                uint64_t now = esp_timer_get_time();
-                if (now - controller->lastStepTime >= stepInterval)
-                {
-                    controller->motor->step();
-                    controller->lastStepTime = now;
-                }
-            }
-
-            vTaskDelay(1);
-        }
-    }
-
-    void MotionController::startTask()
-    {
-        xTaskCreatePinnedToCore(motionTask, "Motion Control", Tasks::MOTION_TASK_STACK_SIZE, this,
-                                Tasks::MOTION_TASK_PRIORITY, &taskHandle, Tasks::MOTION_TASK_CORE);
-        Logger::getInstance().log(motor->getInstanceName());
-        Logger::getInstance().logln(F(" - Motion control task started"));
-    }
-
     void MotionController::setCurrentSpeed(Speed speed)
     {
         currentSpeed = speed;
@@ -218,7 +428,8 @@ namespace MotionSystem
 
         if (motorFrequency > 10 || showStatus)
         {
-            Logger::getInstance().logln(motor->getInstanceName());
+            Logger::getInstance().log(motor->getInstanceName());
+            Logger::getInstance().logln(F(": "));
             Logger::getInstance().logf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n",
                                        relPosition, abs(relTravelPercent), System::REL_TRAVEL_LIMIT_MM, relTarget,
                                        error);

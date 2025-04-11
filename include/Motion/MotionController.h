@@ -18,6 +18,15 @@ const char movingMessage4[] PROGMEM = "Moving: %.3f px (%.3f µm) (Target encode
 
 namespace MotionSystem
 {
+    enum class MotionError
+    {
+        NONE,
+        LIMIT_SWITCH_TRIGGERED,
+        ENCODER_ERROR,
+        MOTOR_ERROR,
+        PID_ERROR
+    };
+
     namespace Motion
     {
         constexpr uint16_t MAX_SPEED          = 5000;   // Maximum step frequency in Hz
@@ -47,6 +56,11 @@ namespace MotionSystem
         Types::MicronPosition  getRelativePosition();
         Types::EncoderPosition getRelativeZeroPosition() const;
         LimitSwitch*           getLimitSwitch() const;
+        Types::MotionState     getCurrentState() const
+        {
+            return currentState;
+        }
+        void stopTask();
 
     private:
         EncoderInterface*      encoder;
@@ -55,10 +69,26 @@ namespace MotionSystem
         LimitSwitch*           limitSwitch;
         Types::Speed           currentSpeed;
         uint64_t               lastStepTime;
+        uint64_t               lastEmergencyCheck;
+        Types::MotionState     currentState;
         TaskHandle_t           taskHandle;
         char                   buffer[128];
         Types::EncoderPosition absoluteZeroPosition;
         Types::EncoderPosition relativeZeroPosition;
+
+        static constexpr uint32_t EMERGENCY_DEBOUNCE_TIME = 100000;   // 100ms in microseconds
+        static constexpr uint32_t MIN_TASK_DELAY          = 1;        // Minimum task delay in ms
+        static constexpr uint32_t PROFILE_INTERVAL        = 1000000;  // 1 second in microseconds
+
+        void     handleEmergencyStop();
+        void     updateStatus();
+        void     updateSpeed(float desiredSpeed, float maxSpeedChange);
+        bool     checkDirectionAndLimits();
+        void     handleStepping(uint64_t currentTime);
+        uint32_t calculateNextStepTime();
+        void     handleError(MotionError error);
+        void     profileMotion();
+        void     updateMotionState();
     };
 }  // namespace MotionSystem
 

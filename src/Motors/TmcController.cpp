@@ -803,7 +803,7 @@ namespace MotionSystem
         delay(5);
         Logger::getInstance().log(instanceName);
         Logger::getInstance().log(F(" - "));
-        Logger::getInstance().log(F("Moving "));
+        Logger::getInstance().log(F("Direction "));
         Logger::getInstance().logln(forward ? F("Forward") : F("Reverse"));
     }
 
