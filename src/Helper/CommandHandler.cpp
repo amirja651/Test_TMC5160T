@@ -85,51 +85,35 @@ namespace MotionSystem
         return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
     }
 
-    void CommandHandler::executeMotorCommand(int motorNum, CommandType type)
+    void CommandHandler::executeMotorCommand(int motorNum, CommandType type, float position, String fullCommand)
     {
-        /*if (command.startsWith("MOVE "))
-        {
-            float position = command.substring(5).toFloat();
-            moveToPosition(position);
-        }
-
-        else if (command.startsWith("REL "))
-        {
-            float distance = command.substring(4).toFloat();
-            moveRelative(distance);
-        }
-
-        else if (command == "STATUS")
-        {
-            statusReporter->printStatusUpdate(true);
-        }
-
-        else if (command == "RESET_LIMIT")
-        {
-            limitSwitch->reset();
-            Logger::getInstance().logln(F("Limit switch flag reset"));
-        }
-
-        else if (command == "RESET_POS")
-        {
-            resetRelativeZero();
-        }
-
-        else
-        {
-            Logger::getInstance().logln(F("Unknown command"));
-        }*/
-
-        if (motors[motorNum - 1].testCommunication(false))
+        if (motorNum == 100 || motors[motorNum - 1].testCommunication(false))
         {
             switch (type)
             {
+                case CommandType::MOTOR_RESET_LIMIT:
+                    Logger::getInstance().log(F("Resetting limit for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
+                    limitSwitch.reset();
+                    break;
+                case CommandType::MOTOR_RESET_POS:
+                    Logger::getInstance().log(F("Resetting position for Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(": "));
+                    motionController[motorNum - 1].resetRelativeZero();
+                    break;
                 case CommandType::MOTOR_MOVE:
                     Logger::getInstance().log(F("Motor "));
                     Logger::getInstance().log(String(motorNum));
                     Logger::getInstance().logln(F(" moving"));
-                    // motionController.moveToPosition(position);
-
+                    motionController[motorNum - 1].moveToPosition(position);
+                    break;
+                case CommandType::MOTOR_RELATIVE_MOVE:
+                    Logger::getInstance().log(F("Motor "));
+                    Logger::getInstance().log(String(motorNum));
+                    Logger::getInstance().logln(F(" moving relative"));
+                    motionController[motorNum - 1].moveRelative(position);
                     break;
                 case CommandType::MOTOR_FORWARD:
                     Logger::getInstance().log(F("Motor "));
@@ -161,6 +145,9 @@ namespace MotionSystem
                     Logger::getInstance().log(F(" - "));
                     motors[motorNum - 1].testCommunication();
                     break;
+                case CommandType::STATUS_REPORT:
+                    // statusReporter->printStatusUpdate(true);
+                    break;
                 case CommandType::DRIVER_STATUS:
                     Logger::getInstance().log(F("\nDriver Status for Motor "));
                     Logger::getInstance().log(String(motorNum));
@@ -188,8 +175,10 @@ namespace MotionSystem
                 case CommandType::HELP:
                     printCommandGuide();
                     break;
+                case CommandType::INVALID:
                 default:
-                    Logger::getInstance().logln(F("Invalid command type ❌ "));
+                    Logger::getInstance().log(F("❌ Invalid command. Use h/? for help: "));
+                    Logger::getInstance().logln(fullCommand);
                     break;
             }
         }
@@ -228,9 +217,7 @@ namespace MotionSystem
         {
             if (!command)
             {
-                Logger::getInstance().logln(F("❌ Invalid command ["));
-                Logger::getInstance().log(cmd);
-                Logger::getInstance().logln(F("]. Use h/? for help"));
+                executeMotorCommand(100, CommandType::INVALID, 0, cmd);
                 return;
             }
 
@@ -242,9 +229,7 @@ namespace MotionSystem
 
         else if (secondWord != "" && thirdWord == "")
         {
-            Logger::getInstance().logln(F("❌ Invalid command ["));
-            Logger::getInstance().log(cmd);
-            Logger::getInstance().logln(F("]. Use h/? for help"));
+            executeMotorCommand(100, CommandType::INVALID, 0, cmd);
             return;
         }
 
@@ -258,33 +243,27 @@ namespace MotionSystem
 
                     if (!validateMotorNumber(motorNum))
                     {
-                        Logger::getInstance().log(F(" ❌ Invalid motor number: "));
-                        Logger::getInstance().log(String(motorNum));
+                        executeMotorCommand(100, CommandType::INVALID, 0, cmd);
                         return;
                     }
 
-                    executeMotorCommand(motorNum, command->type);
+                    executeMotorCommand(motorNum, command->type, secondWord.toFloat());
                 }
                 else
                 {
-                    Logger::getInstance().logln(F("❌ Invalid command ["));
-                    Logger::getInstance().log(cmd);
-                    Logger::getInstance().logln(F("]. Use h/? for help"));
+                    executeMotorCommand(100, CommandType::INVALID, 0, cmd);
                     return;
                 }
             }
             else
             {
-                Logger::getInstance().logln(F("❌ Invalid command ["));
-                Logger::getInstance().log(cmd);
-                Logger::getInstance().logln(F("]. Use h/? for help"));
+                executeMotorCommand(100, CommandType::INVALID, 0, cmd);
                 return;
             }
         }
-
         else
         {
-            Logger::getInstance().logln("Invalid command.");
+            executeMotorCommand(100, CommandType::INVALID, 0, cmd);
         }
     }
 }  // namespace MotionSystem

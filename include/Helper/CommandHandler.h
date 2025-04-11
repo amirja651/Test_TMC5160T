@@ -11,11 +11,15 @@ namespace MotionSystem
 {
     enum class CommandType
     {
+        MOTOR_RESET_LIMIT,
+        MOTOR_RESET_POS,
         MOTOR_MOVE,
+        MOTOR_RELATIVE_MOVE,
         MOTOR_FORWARD,
         MOTOR_REVERSE,
         MOTOR_STOP,
         DRIVER_SPI_TEST,
+        STATUS_REPORT,
         DRIVER_STATUS,
         DRIVER_CONFIG,
         TEMPERATURE,
@@ -57,8 +61,8 @@ namespace MotionSystem
         void                   printCommandGuide();
         const Command*         findCommand(String cmd) const;
         bool                   validateMotorNumber(int motorNum) const;
-        void                   executeMotorCommand(int motorNum, CommandType type);
-        bool                   isValidMotorCommand(String cmd) const;
+        void executeMotorCommand(int motorNum, CommandType type, float position, String fullCommand = "");
+        bool isValidMotorCommand(String cmd) const;
 
     private:
         CommandHandler();
