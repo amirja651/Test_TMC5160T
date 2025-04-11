@@ -1,16 +1,19 @@
 #include "Motion/MotionController.h"
+#include "Helper/System.h"
+#include "Helper/Tasks.h"
+#include "Helper/Utils.h"
+#include "esp_timer.h"
 
 namespace MotionSystem
 {
     using namespace MotionSystem::Types;
 
     MotionController::MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
-                                       LimitSwitch* limitSwitch, StatusReporter* statusReporter)
+                                       LimitSwitch* limitSwitch)
         : encoder(encoder),
           motor(motor),
           pidController(pidController),
           limitSwitch(limitSwitch),
-          statusReporter(statusReporter),
           currentSpeed(0),
           lastStepTime(0),
           taskHandle(nullptr)
@@ -34,24 +37,23 @@ namespace MotionSystem
         limitSwitch->init();
         lastStepTime                    = esp_timer_get_time();
         EncoderPosition initialPosition = encoder->readPosition();
-        statusReporter->setAbsoluteZeroPosition(initialPosition);
-        statusReporter->setRelativeZeroPosition(initialPosition);
+        setAbsoluteZeroPosition(initialPosition);
+        setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
         Logger::getInstance().logln(F("Motion controller initialized"));
     }
 
     void MotionController::moveToPosition(MicronPosition positionMicrons)
     {
-        if (positionMicrons < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
-            positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS)
+        if (positionMicrons < -System::REL_TRAVEL_LIMIT_MICRONS || positionMicrons > System::REL_TRAVEL_LIMIT_MICRONS)
         {
-            snprintf_P(buffer, sizeof(buffer), errorMessage, positionMicrons, Config::System::REL_TRAVEL_LIMIT_MM);
+            snprintf_P(buffer, sizeof(buffer), errorMessage, positionMicrons, System::REL_TRAVEL_LIMIT_MM);
             Logger::getInstance().logln(buffer);
             return;
         }
 
-        EncoderPosition targetPosition = statusReporter->getRelativeZeroPosition() +
-                                         MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
+        EncoderPosition targetPosition =
+            getRelativeZeroPosition() + MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
         Logger::getInstance().logln(buffer);
@@ -59,12 +61,11 @@ namespace MotionSystem
 
     void MotionController::moveRelative(MicronPosition distanceMicrons)
     {
-        MicronPosition currentRelPos = statusReporter->getRelativePosition();
+        MicronPosition currentRelPos = getRelativePosition();
         MicronPosition newRelPos     = currentRelPos + distanceMicrons;
-        if (newRelPos < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
-            newRelPos > Config::System::REL_TRAVEL_LIMIT_MICRONS)
+        if (newRelPos < -System::REL_TRAVEL_LIMIT_MICRONS || newRelPos > System::REL_TRAVEL_LIMIT_MICRONS)
         {
-            snprintf_P(buffer, sizeof(buffer), errorMessage3, newRelPos, Config::System::REL_TRAVEL_LIMIT_MM);
+            snprintf_P(buffer, sizeof(buffer), errorMessage3, newRelPos, System::REL_TRAVEL_LIMIT_MM);
             Logger::getInstance().logln(buffer);
             return;
         }
@@ -73,8 +74,8 @@ namespace MotionSystem
         EncoderPosition targetPosition =
             currentPosition + MotionSystem::Utils::getInstance().micronsToEncCounts(distanceMicrons);
         pidController->setTargetPosition(targetPosition);
-        snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons,
-                   distanceMicrons / Config::System::PIXEL_SIZE, targetPosition);
+        snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons, distanceMicrons / System::PIXEL_SIZE,
+                   targetPosition);
         Logger::getInstance().logln(buffer);
     }
 
@@ -100,7 +101,7 @@ namespace MotionSystem
     void MotionController::resetRelativeZero()
     {
         EncoderPosition currentPosition = encoder->readPosition();
-        statusReporter->setRelativeZeroPosition(currentPosition);
+        setRelativeZeroPosition(currentPosition);
         Logger::getInstance().logln(F("Relative zero position reset at current position"));
     }
 
@@ -108,8 +109,18 @@ namespace MotionSystem
     {
         MotionController* controller = static_cast<MotionController*>(parameter);
         controller->lastStepTime     = esp_timer_get_time();
+
         while (true)
         {
+            Types::MicronPosition relPosition = controller->getRelativePosition();
+            Types::MicronPosition relTarget   = Utils::getInstance().countsToMicrons(
+                controller->pidController->getTargetPosition() - controller->relativeZeroPosition);
+
+            if (abs(relPosition - relTarget) > 0.2)
+            {
+                controller->printStatusUpdate();
+            }
+
             if (controller->limitSwitch->isEmergencyStop())
             {
                 controller->currentSpeed = 0;
@@ -120,8 +131,9 @@ namespace MotionSystem
             }
 
             int32_t pidOutput      = controller->pidController->update();
-            float   desiredSpeed   = constrain(pidOutput, -Config::Motion::MAX_SPEED, Config::Motion::MAX_SPEED);
-            float   maxSpeedChange = Config::Motion::ACCELERATION / Config::Motion::PID_UPDATE_FREQ;
+            float   desiredSpeed   = constrain(pidOutput, -Motion::MAX_SPEED, Motion::MAX_SPEED);
+            float   maxSpeedChange = Motion::ACCELERATION / Motion::MOTION_UPDATE_FREQ;
+
             if (desiredSpeed > controller->currentSpeed + maxSpeedChange)
             {
                 controller->currentSpeed += maxSpeedChange;
@@ -137,8 +149,9 @@ namespace MotionSystem
                 controller->currentSpeed = desiredSpeed;
             }
 
-            controller->statusReporter->setCurrentSpeed(controller->currentSpeed);
+            controller->setCurrentSpeed(controller->currentSpeed);
             bool direction = controller->currentSpeed >= 0;
+
             if (controller->limitSwitch->isTriggered())
             {
                 if (!direction)
@@ -149,7 +162,9 @@ namespace MotionSystem
             }
 
             controller->motor->setDirection(direction);
+
             uint32_t stepInterval = controller->motor->calculateStepInterval(controller->currentSpeed);
+
             if (stepInterval > 0)
             {
                 uint64_t now = esp_timer_get_time();
@@ -166,8 +181,8 @@ namespace MotionSystem
 
     void MotionController::startTask()
     {
-        xTaskCreatePinnedToCore(motionTask, "Motion Control", Config::Tasks::MOTION_TASK_STACK_SIZE, this,
-                                Config::Tasks::MOTION_TASK_PRIORITY, &taskHandle, Config::Tasks::MOTION_TASK_CORE);
+        xTaskCreatePinnedToCore(motionTask, "Motion Control", Tasks::MOTION_TASK_STACK_SIZE, this,
+                                Tasks::MOTION_TASK_PRIORITY, &taskHandle, Tasks::MOTION_TASK_CORE);
         Logger::getInstance().logln(F("Motion control task started"));
     }
 
@@ -179,6 +194,62 @@ namespace MotionSystem
     Speed MotionController::getCurrentSpeed() const
     {
         return currentSpeed;
+    }
+
+    void MotionController::printStatusUpdate(bool showStatus)
+    {
+        Types::MicronPosition relPosition = getRelativePosition();
+        Types::MicronPosition absPosition = getAbsolutePosition();
+        Types::MicronPosition relTarget =
+            Utils::getInstance().countsToMicrons(pidController->getTargetPosition() - relativeZeroPosition);
+
+        float error            = relTarget - relPosition;
+        float motorFrequency   = abs(currentSpeed);  // Steps per second
+        float relTravelPercent = (relPosition / System::REL_TRAVEL_LIMIT_MICRONS) * 100;
+
+        if (motorFrequency > 10 || showStatus)
+        {
+            Logger::getInstance().logf("POS(rel): %.3f µm (%.1f%% of ±%.1f mm), TARGET: %.3f µm, ERROR: %.3f µm\n",
+                                       relPosition, abs(relTravelPercent), System::REL_TRAVEL_LIMIT_MM, relTarget,
+                                       error);
+
+            Logger::getInstance().logf("POS(abs): %.3f µm, Travel: %.1f%% of %.1f mm\n", absPosition,
+                                       (absPosition / System::TOTAL_TRAVEL_MICRONS) * 100, System::TOTAL_TRAVEL_MM);
+
+            Logger::getInstance().logf(
+                "Motor Freq: %.1f Hz, Speed: %.3f mm/s, Limit Switch: %s\n", motorFrequency,
+                (motorFrequency / (System::STEPS_PER_REV * System::MICROSTEPS)) * System::LEAD_SCREW_PITCH,
+
+                limitSwitch->isTriggered() ? "TRIGGERED" : "clear");
+            Logger::getInstance().logln(F("-------------------------------"));
+        }
+    }
+
+    void MotionController::setAbsoluteZeroPosition(Types::EncoderPosition position)
+    {
+        absoluteZeroPosition = position;
+    }
+
+    void MotionController::setRelativeZeroPosition(Types::EncoderPosition position)
+    {
+        relativeZeroPosition = position;
+    }
+
+    Types::MicronPosition MotionController::getAbsolutePosition()
+    {
+        Types::EncoderPosition currentPosition = encoder->readPosition();
+        return Utils::getInstance().countsToMicrons(currentPosition - absoluteZeroPosition);
+    }
+
+    Types::MicronPosition MotionController::getRelativePosition()
+    {
+        Types::EncoderPosition currentPosition = encoder->readPosition();
+        return Utils::getInstance().countsToMicrons(currentPosition - relativeZeroPosition);
+    }
+
+    Types::EncoderPosition MotionController::getRelativeZeroPosition() const
+    {
+        return relativeZeroPosition;
     }
 
 }  // namespace MotionSystem

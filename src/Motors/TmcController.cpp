@@ -1,4 +1,6 @@
 #include "Motors/TmcController.h"
+#include "Helper/Logger.h"
+#include "Helper/System.h"
 
 MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin,
                                            uint8_t enPin, MotorType motorType, uint8_t mosiPin, uint8_t misoPin,
@@ -852,10 +854,10 @@ uint32_t MotionSystem::TmcController::calculateStepInterval(Types::Speed speed)
 MotionSystem::Types::StepPosition MotionSystem::TmcController::micronsToSteps(
     MotionSystem::Types::MicronPosition microns)
 {
-    return roundf(microns * Config::System::MOTOR_STEPS_PER_MICRON);
+    return roundf(microns * System::MOTOR_STEPS_PER_MICRON);
 }
 
 MotionSystem::Types::StepPosition MotionSystem::TmcController::pixelsToSteps(MotionSystem::Types::PixelPosition pixels)
 {
-    return micronsToSteps(pixels * Config::System::PIXEL_SIZE);
+    return micronsToSteps(pixels * System::PIXEL_SIZE);
 }

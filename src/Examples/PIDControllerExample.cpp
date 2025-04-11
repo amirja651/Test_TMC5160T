@@ -2,6 +2,7 @@
 #include "Encoders/EncoderFactory.h"
 #include "Encoders/PWMEncoder.h"
 #include "Helper/Logger.h"
+#include "Helper/Types.h"
 #include "Motion/PIDController.h"
 
 using namespace MotionSystem;
@@ -77,7 +78,7 @@ void loop1()
 
         // Set new target position
         float targetPosition = positions[positionIndex];
-        pidControllerTest.setTargetPosition(static_cast<EncoderPosition>(targetPosition));
+        pidControllerTest.setTargetPosition(static_cast<Types::EncoderPosition>(targetPosition));
 
         char moveBuffer[128];
         snprintf(moveBuffer, sizeof(moveBuffer), "Moving to position: %.2f microns", targetPosition);

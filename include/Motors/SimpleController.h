@@ -1,8 +1,7 @@
 #ifndef STEPPER_MOTOR_H
 #define STEPPER_MOTOR_H
-
-#include "Config.h"
-#include "Helper/Logger.h"
+#include <Arduino.h>
+#include "Helper/Types.h"
 
 namespace MotionSystem
 {

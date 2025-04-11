@@ -1,4 +1,6 @@
 #include "Helper/CommandHandler.h"
+#include "Globals.h"
+#include "Helper/System.h"
 
 namespace MotionSystem
 {
@@ -56,7 +58,7 @@ namespace MotionSystem
 
     bool CommandHandler::validateMotorNumber(int motorNum) const
     {
-        return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
+        return (motorNum >= 1 && motorNum <= System::NUM_MOTORS);
     }
 
     bool CommandHandler::validateCommandFormat(const String& cmd) const
@@ -93,7 +95,7 @@ namespace MotionSystem
                 errorMessage = "❌ Invalid command format. Use h/? for help";
                 break;
             case CommandStatus::INVALID_MOTOR_NUMBER:
-                errorMessage = "❌ Invalid motor number. Valid range: 1-" + String(Config::TMC5160T_Driver::NUM_MOTORS);
+                errorMessage = "❌ Invalid motor number. Valid range: 1-" + String(System::NUM_MOTORS);
                 break;
             case CommandStatus::INVALID_PARAMETER:
                 errorMessage = "❌ Invalid parameter format";
@@ -288,7 +290,7 @@ namespace MotionSystem
     void CommandHandler::beginSerial(uint32_t baudRate)
     {
         Serial.begin(baudRate);
-        delay(Config::System::STARTUP_DELAY_MS);
+        delay(System::STARTUP_DELAY_MS);
         while (!Serial)
         {
             delay(10);

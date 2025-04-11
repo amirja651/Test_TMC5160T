@@ -4,11 +4,20 @@
 #include "Config.h"
 #include "Encoders/EncoderInterface.h"
 #include "Helper/Logger.h"
+#include "Helper/Types.h"
 #include "esp_timer.h"
 
 namespace MotionSystem
 {
-    using namespace MotionSystem::Types;
+    namespace PID
+    {
+        constexpr float    KP              = 1.2f;   // 0.8f   // Proportional gain
+        constexpr float    KI              = 0.15f;  // 0.1f;  // Integral gain
+        constexpr float    KD              = 0.08f;  // 0.05f  // Derivative gain
+        constexpr uint16_t MAX_INTEGRAL    = 1000;   // Anti-windup limit
+        constexpr uint16_t PID_UPDATE_FREQ = 1000;   // PID update frequency in Hz
+
+    }  // namespace PID
 
     struct PIDStats
     {
@@ -27,13 +36,13 @@ namespace MotionSystem
         ~PIDController();
 
         // Core functionality
-        void            init();
-        void            setTargetPosition(Types::EncoderPosition targetPosition);
-        EncoderPosition getTargetPosition() const;
-        EncoderPosition update();
-        static void     pidTask(void* parameter);
-        void            startTask();
-        void            stopTask();
+        void                   init();
+        void                   setTargetPosition(Types::EncoderPosition targetPosition);
+        Types::EncoderPosition getTargetPosition() const;
+        Types::EncoderPosition update();
+        static void            pidTask(void* parameter);
+        void                   startTask();
+        void                   stopTask();
 
         // Configuration and validation
         bool validateConfig() const;
@@ -48,14 +57,14 @@ namespace MotionSystem
         float getCurrentOutput() const;
 
     private:
-        EncoderInterface* encoder;
-        EncoderPosition   targetPosition;
-        EncoderPosition   lastEncoderPosition;
-        float             integral;
-        float             lastError;
-        EncoderPosition   output;
-        Timestamp         lastPidTime;
-        TaskHandle_t      taskHandle;
+        EncoderInterface*      encoder;
+        Types::EncoderPosition targetPosition;
+        Types::EncoderPosition lastEncoderPosition;
+        float                  integral;
+        float                  lastError;
+        Types::EncoderPosition output;
+        Types::Timestamp       lastPidTime;
+        TaskHandle_t           taskHandle;
 
         // Configuration parameters
         float kp;
@@ -73,8 +82,8 @@ namespace MotionSystem
         float    currentError;
         float    currentOutput;
 
-        static constexpr EncoderPosition INVALID_POSITION = -1;
-        static constexpr float           MIN_UPDATE_TIME  = 0.0001f;  // 100 microseconds
+        static constexpr Types::EncoderPosition INVALID_POSITION = -1;
+        static constexpr float                  MIN_UPDATE_TIME  = 0.0001f;  // 100 microseconds
     };
 }  // namespace MotionSystem
 

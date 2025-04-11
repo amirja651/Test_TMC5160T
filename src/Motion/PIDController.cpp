@@ -1,4 +1,6 @@
 #include "Motion/PIDController.h"
+#include "Helper/Tasks.h"
+#include "Helper/Types.h"
 
 namespace MotionSystem
 {
@@ -11,10 +13,10 @@ namespace MotionSystem
           output(0),
           lastPidTime(0),
           taskHandle(nullptr),
-          kp(Config::PID::KP),
-          ki(Config::PID::KI),
-          kd(Config::PID::KD),
-          maxIntegral(Config::PID::MAX_INTEGRAL),
+          kp(PID::KP),
+          ki(PID::KI),
+          kd(PID::KD),
+          maxIntegral(PID::MAX_INTEGRAL),
           maxOutput(1000.0f),  // Default output limit
           shouldStop(false),
           updateCount(0),
@@ -100,17 +102,17 @@ namespace MotionSystem
         maxOutput = limit;
     }
 
-    void PIDController::setTargetPosition(EncoderPosition targetPosition)
+    void PIDController::setTargetPosition(Types::EncoderPosition targetPosition)
     {
         this->targetPosition = targetPosition;
     }
 
-    EncoderPosition PIDController::getTargetPosition() const
+    Types::EncoderPosition PIDController::getTargetPosition() const
     {
         return targetPosition;
     }
 
-    EncoderPosition PIDController::update()
+    Types::EncoderPosition PIDController::update()
     {
         if (!encoder)
         {
@@ -120,7 +122,7 @@ namespace MotionSystem
 
         uint64_t startTime = esp_timer_get_time();
 
-        EncoderPosition currentPosition = encoder->readPosition();
+        Types::EncoderPosition currentPosition = encoder->readPosition();
         if (currentPosition == INVALID_POSITION)
         {
             errorCount++;
@@ -168,7 +170,7 @@ namespace MotionSystem
         updateCount++;
         totalUpdateTime += (esp_timer_get_time() - startTime) / 1000000.0f;
 
-        return static_cast<EncoderPosition>(currentOutput);
+        return static_cast<Types::EncoderPosition>(currentOutput);
     }
 
     void PIDController::pidTask(void* parameter)
@@ -182,7 +184,7 @@ namespace MotionSystem
 
         controller->lastPidTime        = esp_timer_get_time();
         TickType_t       xLastWakeTime = xTaskGetTickCount();
-        const TickType_t xFrequency    = 1000 / Config::Motion::PID_UPDATE_FREQ;
+        const TickType_t xFrequency    = 1000 / PID::PID_UPDATE_FREQ;
 
         while (true)
         {
@@ -191,7 +193,7 @@ namespace MotionSystem
                 break;
             }
 
-            EncoderPosition result = controller->update();
+            Types::EncoderPosition result = controller->update();
             if (result == INVALID_POSITION)
             {
                 // Handle error case
@@ -214,8 +216,8 @@ namespace MotionSystem
         }
 
         shouldStop = false;
-        xTaskCreatePinnedToCore(pidTask, "PID Control", Config::Tasks::PID_TASK_STACK_SIZE, this,
-                                Config::Tasks::PID_TASK_PRIORITY, &taskHandle, Config::Tasks::PID_TASK_CORE);
+        xTaskCreatePinnedToCore(pidTask, "PID Control", Tasks::PID_TASK_STACK_SIZE, this, Tasks::PID_TASK_PRIORITY,
+                                &taskHandle, Tasks::PID_TASK_CORE);
 
         Logger::getInstance().logln(F("PID control task started"));
     }

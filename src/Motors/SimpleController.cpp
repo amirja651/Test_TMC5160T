@@ -1,4 +1,8 @@
 #include "Motors/SimpleController.h"
+#include "Config.h"
+#include "Helper/Logger.h"
+#include "Helper/Pins.h"
+#include "Helper/System.h"
 
 namespace MotionSystem
 {
@@ -6,34 +10,35 @@ namespace MotionSystem
 
     void SimpleController ::begin()
     {
-        pinMode(Config::Pins::STEP_PIN, OUTPUT);
-        pinMode(Config::Pins::DIR_PIN, OUTPUT);
-        pinMode(Config::Pins::ENABLE_PIN, OUTPUT);
-        digitalWrite(Config::Pins::ENABLE_PIN, LOW);  // Enable the motor driver
+        pinMode(Pins::Simple_Driver::STEP_PIN, OUTPUT);
+        pinMode(Pins::Simple_Driver::DIR_PIN, OUTPUT);
+        pinMode(Pins::Simple_Driver::ENABLE_PIN, OUTPUT);
+        digitalWrite(Pins::Simple_Driver::ENABLE_PIN, LOW);  // Enable the motor driver
+
         Logger::getInstance().log(F("Stepper motor initialized on pins STEP:"));
-        Logger::getInstance().log(String(Config::Pins::STEP_PIN));
+        Logger::getInstance().log(String(Pins::Simple_Driver::STEP_PIN));
         Logger::getInstance().log(F(" DIR:"));
-        Logger::getInstance().log(String(Config::Pins::DIR_PIN));
+        Logger::getInstance().log(String(Pins::Simple_Driver::DIR_PIN));
         Logger::getInstance().log(F(" EN:"));
-        Logger::getInstance().logln(String(Config::Pins::ENABLE_PIN));
+        Logger::getInstance().logln(String(Pins::Simple_Driver::ENABLE_PIN));
     }
 
     void SimpleController ::enableDriver(bool enable)
     {
-        digitalWrite(Config::Pins::ENABLE_PIN, enable ? LOW : HIGH);
+        digitalWrite(Pins::Simple_Driver::ENABLE_PIN, enable ? LOW : HIGH);
     }
 
     void SimpleController ::setDirection(bool dir)
     {
-        digitalWrite(Config::Pins::DIR_PIN, dir);
+        digitalWrite(Pins::Simple_Driver::DIR_PIN, dir);
         delayMicroseconds(5);  // Direction setup time
     }
 
     void IRAM_ATTR SimpleController ::step()
     {
-        digitalWrite(Config::Pins::STEP_PIN, HIGH);
+        digitalWrite(Pins::Simple_Driver::STEP_PIN, HIGH);
         delayMicroseconds(2);  // Minimum pulse width (check driver specs)
-        digitalWrite(Config::Pins::STEP_PIN, LOW);
+        digitalWrite(Pins::Simple_Driver::STEP_PIN, LOW);
     }
 
     uint32_t SimpleController ::calculateStepInterval(Types::Speed speed)
@@ -45,12 +50,12 @@ namespace MotionSystem
 
     Types::StepPosition SimpleController ::micronsToSteps(Types::MicronPosition microns)
     {
-        return roundf(microns * Config::System::MOTOR_STEPS_PER_MICRON);
+        return roundf(microns * System::MOTOR_STEPS_PER_MICRON);
     }
 
     Types::StepPosition SimpleController ::pixelsToSteps(Types::PixelPosition pixels)
     {
-        return micronsToSteps(pixels * Config::System::PIXEL_SIZE);
+        return micronsToSteps(pixels * System::PIXEL_SIZE);
     }
 
 }  // namespace MotionSystem

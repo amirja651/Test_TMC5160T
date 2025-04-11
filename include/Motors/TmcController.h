@@ -3,7 +3,8 @@
 
 #include <TMCStepper.h>
 #include "Config.h"
-#include "Helper/Logger.h"
+#include "Helper/Pins.h"
+#include "Helper/Types.h"
 
 namespace MotionSystem
 {
@@ -18,8 +19,8 @@ namespace MotionSystem
     {
     public:
         TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
-                      MotorType motorType = MotorType::UNKNOWN, uint8_t mosiPin = Config::SPI::MOSI,
-                      uint8_t misoPin = Config::SPI::MISO, uint8_t sckPin = Config::SPI::SCK);
+                      MotorType motorType = MotorType::UNKNOWN, uint8_t mosiPin = Pins::SPI::MOSI,
+                      uint8_t misoPin = Pins::SPI::MISO, uint8_t sckPin = Pins::SPI::SCK);
         void                begin();                          // Initialize the motor controller
         void                moveForward();                    // Move motor in forward direction
         void                moveReverse();                    // Move motor in reverse direction
