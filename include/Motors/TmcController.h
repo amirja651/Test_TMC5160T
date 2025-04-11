@@ -18,8 +18,8 @@ namespace MotionSystem
     {
     public:
         TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
-                      uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
-                      uint8_t sckPin = Config::SPI::SCK, MotorType motorType = MotorType::UNKNOWN);
+                      MotorType motorType = MotorType::UNKNOWN, uint8_t mosiPin = Config::SPI::MOSI,
+                      uint8_t misoPin = Config::SPI::MISO, uint8_t sckPin = Config::SPI::SCK);
         void                begin();                          // Initialize the motor controller
         void                moveForward();                    // Move motor in forward direction
         void                moveReverse();                    // Move motor in reverse direction
