@@ -1,5 +1,6 @@
 #ifndef STEPPER_MOTOR_H
 #define STEPPER_MOTOR_H
+
 #include <Arduino.h>
 #include "Helper/Types.h"
 
