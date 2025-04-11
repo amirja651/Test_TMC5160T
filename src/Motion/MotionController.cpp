@@ -32,7 +32,7 @@ namespace MotionSystem
         motor->begin();
         pidController->init();
         limitSwitch->init();
-        lastStepTime                           = esp_timer_get_time();
+        lastStepTime                    = esp_timer_get_time();
         EncoderPosition initialPosition = encoder->readPosition();
         statusReporter->setAbsoluteZeroPosition(initialPosition);
         statusReporter->setRelativeZeroPosition(initialPosition);
@@ -51,7 +51,7 @@ namespace MotionSystem
         }
 
         EncoderPosition targetPosition = statusReporter->getRelativeZeroPosition() +
-                                                MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
+                                         MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
         Logger::getInstance().logln(buffer);
@@ -80,9 +80,8 @@ namespace MotionSystem
 
     bool MotionController::waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs)
     {
-        EncoderPosition toleranceCounts =
-            MotionSystem::Utils::getInstance().micronsToEncCounts(toleranceMicrons);
-        uint32_t startTime = millis();
+        EncoderPosition toleranceCounts = MotionSystem::Utils::getInstance().micronsToEncCounts(toleranceMicrons);
+        uint32_t        startTime       = millis();
         while (millis() - startTime < timeoutMs)
         {
             EncoderPosition currentPosition = encoder->readPosition();
