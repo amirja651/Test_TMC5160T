@@ -57,7 +57,7 @@ void serialTask(void* pvParameters)
             command.trim();
             command.toUpperCase();
 
-            MotionSystem::CommandHandler::getInstance().processCommand(command);
+            // MotionSystem::CommandHandler::getInstance().processCommand(command);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));

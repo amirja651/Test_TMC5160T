@@ -31,26 +31,11 @@ namespace MotionSystem
 
     struct Command
     {
-        const char*  name;
-        const char*  description;
-        CommandType  type;
-        const String key;
+        const char* name;
+        const char* description;
+        CommandType type;
+        const char* key;
     };
-
-    namespace CommandKey
-    {
-        extern const String CMD_MOVE;
-        extern const String CMD_FORWARD;
-        extern const String CMD_REVERSE;
-        extern const String CMD_STOP;
-        extern const String CMD_RESET;
-        extern const String CMD_TEST_SPI;
-        extern const String CMD_SHOW_STATUS;
-        extern const String CMD_SHOW_CONFIG;
-        extern const String CMD_TOGGLE_MODE;
-        extern const String CMD_HELP;
-        extern const String CMD_HELP_ALT;
-    }  // namespace CommandKey
 
     class CommandHandler
     {

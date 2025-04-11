@@ -2,30 +2,18 @@
 
 namespace MotionSystem
 {
-    const String CommandKey::CMD_MOVE        = "MOV";
-    const String CommandKey::CMD_FORWARD     = "FWD";
-    const String CommandKey::CMD_REVERSE     = "REV";
-    const String CommandKey::CMD_STOP        = "STP";
-    const String CommandKey::CMD_RESET       = "RST";
-    const String CommandKey::CMD_TEST_SPI    = "TST";
-    const String CommandKey::CMD_SHOW_STATUS = "STA";
-    const String CommandKey::CMD_SHOW_CONFIG = "CFG";
-    const String CommandKey::CMD_TOGGLE_MODE = "MOD";
-    const String CommandKey::CMD_HELP        = "HLP";
-    const String CommandKey::CMD_HELP_ALT    = "?";
-
     const Command CommandHandler::commands[] = {
-        {"Move", "Move motor", CommandType::MOTOR_FORWARD, CommandKey::CMD_MOVE},
-        {"Forward", "Move motor forward", CommandType::MOTOR_FORWARD, CommandKey::CMD_FORWARD},
-        {"Reverse", "Move motor in reverse", CommandType::MOTOR_REVERSE, CommandKey::CMD_REVERSE},
-        {"Stop", "Stop motor", CommandType::MOTOR_STOP, CommandKey::CMD_STOP},
-        {"Test", "Test motor communication", CommandType::DRIVER_SPI_TEST, CommandKey::CMD_TEST_SPI},
-        {"Info", "Show system information", CommandType::DRIVER_STATUS, CommandKey::CMD_SHOW_STATUS},
-        {"Print", "Show Driver Configuration", CommandType::DRIVER_CONFIG, CommandKey::CMD_SHOW_CONFIG},
-        {"Mode", "Toggle mode", CommandType::MODE_TOGGLE, CommandKey::CMD_TOGGLE_MODE},
-        {"Reset", "Reset driver", CommandType::DRIVER_RESET, CommandKey::CMD_RESET},
-        {"Help", "Show command guide", CommandType::HELP, CommandKey::CMD_HELP},
-        {"?", "Show command guide", CommandType::HELP, CommandKey::CMD_HELP_ALT}};
+        {.name = "Move", .description = "Move motor", .type = CommandType::MOTOR_FORWARD, .key = "MOV"},
+        {.name = "Forward", .description = "Move motor forward", .type = CommandType::MOTOR_FORWARD, .key = "FWD"},
+        {.name = "Reverse", .description = "Move motor in reverse", .type = CommandType::MOTOR_REVERSE, .key = "REV"},
+        {.name = "Stop", .description = "Stop motor", .type = CommandType::MOTOR_STOP, .key = "STP"},
+        {.name = "Test", .description = "Test motor communication", .type = CommandType::DRIVER_SPI_TEST, .key = "TST"},
+        {.name = "Info", .description = "Show system information", .type = CommandType::DRIVER_STATUS, .key = "STA"},
+        {.name = "Print", .description = "Show Driver Configuration", .type = CommandType::DRIVER_CONFIG, .key = "CFG"},
+        {.name = "Mode", .description = "Toggle mode", .type = CommandType::MODE_TOGGLE, .key = "MOD"},
+        {.name = "Reset", .description = "Reset driver", .type = CommandType::DRIVER_RESET, .key = "RST"},
+        {.name = "Help", .description = "Show command guide", .type = CommandType::HELP, .key = "HLP"},
+        {.name = "?", .description = "Show command guide", .type = CommandType::HELP, .key = "?"}};
 
     const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
 
