@@ -7,12 +7,19 @@
 
 namespace MotionSystem
 {
+    enum class MotorType
+    {
+        NEMA11_HS13_1004H,  // 11HS13-1004H Stepper Motor
+        P28SHD4611_12SK,    // P28SHD4611-12SK Hybrid Stepper Motor
+        UNKNOWN
+    };
+
     class TmcController
     {
     public:
         TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin, uint8_t enPin,
                       uint8_t mosiPin = Config::SPI::MOSI, uint8_t misoPin = Config::SPI::MISO,
-                      uint8_t sckPin = Config::SPI::SCK);
+                      uint8_t sckPin = Config::SPI::SCK, MotorType motorType = MotorType::UNKNOWN);
         void                begin();                          // Initialize the motor controller
         void                moveForward();                    // Move motor in forward direction
         void                moveReverse();                    // Move motor in reverse direction
@@ -56,7 +63,6 @@ namespace MotionSystem
         Types::StepPosition pixelsToSteps(Types::PixelPosition pixels);
 
     private:
-        void           configureDriver2();                      // Configure driver parameters
         void           configureDriver();                       // Configure driver parameters
         void           setupPins();                             // Setup GPIO pins
         bool           checkAndReinitializeDriver();            // Check and reinitialize driver if needed
@@ -64,38 +70,76 @@ namespace MotionSystem
         void           printErrorFlags(uint32_t status);        // Print error flags
         void           printStallGuardStatus(uint32_t status);  // Print stall guard status
         void           printDriverState(uint32_t status);       // Print driver state
-        TMC5160Stepper driver;                                  // TMC5160 driver instance
-        const char*    instanceName;                            // Name of this motor controller instance
-        const uint8_t  csPin;                                   // Chip select pin
-        const uint8_t  stepPin;                                 // Step pin
-        const uint8_t  dirPin;                                  // Direction pin
-        const uint8_t  enPin;                                   // Enable pin
-        const uint8_t  mosiPin;                                 // MOSI pin
-        const uint8_t  misoPin;                                 // MISO pin
-        const uint8_t  sckPin;                                  // SCK pin
-        const int      stepDelay;                               // Delay between steps
-        unsigned long  lastStepTime;                            // Timestamp of last step
-        int            stepCounter;                             // Step counter for status updates
-        uint16_t       runCurrent;                              // Current running current value
-        uint16_t       holdCurrent;                             // Current holding current value
-        uint16_t       speed;                                   // Current speed in steps per second
-        uint32_t       maxSpeed;                                // Maximum speed
-        uint16_t       acceleration;                            // Current acceleration in steps per second squared
-        uint32_t       maxAcceleration;                         // Maximum acceleration
-        uint32_t       maxDeceleration;                         // Maximum deceleration
-        unsigned long  lastTempPrintTime;                       // Last temperature print timestamp
-        int            lastTemperature;                         // Last recorded temperature
-        uint32_t       coolStepThreshold;                       // CoolStep threshold value
-        int8_t         stallGuardThreshold;                     // StallGuard threshold value
-        uint8_t        currentHoldDelay;                        // Current hold delay
-        uint8_t        rampMode;                                // Current ramp mode
-        bool           isMoving;                                // Current movement state
-        bool           direction;                               // Current movement direction
-        bool           diagnosticsEnabled;                      // Whether advanced diagnostics are enabled
-        bool           stallGuardFilter;                        // StallGuard filter state
-        bool           spreadCycleEnabled;                      // SpreadCycle mode state
-        bool           microstepInterpolation;                  // Microstep interpolation state
+        TMC5160Stepper driver;
+        const char*    instanceName;
+        uint8_t        csPin;
+        uint8_t        stepPin;
+        uint8_t        dirPin;
+        uint8_t        enPin;
+        uint8_t        mosiPin;
+        uint8_t        misoPin;
+        uint8_t        sckPin;
+        MotorType      motorType;
+        uint32_t       stepDelay;
+        unsigned long  lastStepTime;            // Timestamp of last step
+        int            stepCounter;             // Step counter for status updates
+        uint16_t       runCurrent;              // Current running current value
+        uint16_t       holdCurrent;             // Current holding current value
+        uint16_t       speed;                   // Current speed in steps per second
+        uint32_t       maxSpeed;                // Maximum speed
+        uint16_t       acceleration;            // Current acceleration in steps per second squared
+        uint32_t       maxAcceleration;         // Maximum acceleration
+        uint32_t       maxDeceleration;         // Maximum deceleration
+        unsigned long  lastTempPrintTime;       // Last temperature print timestamp
+        int            lastTemperature;         // Last recorded temperature
+        uint32_t       coolStepThreshold;       // CoolStep threshold value
+        int8_t         stallGuardThreshold;     // StallGuard threshold value
+        uint8_t        currentHoldDelay;        // Current hold delay
+        uint8_t        rampMode;                // Current ramp mode
+        bool           isMoving;                // Current movement state
+        bool           direction;               // Current movement direction
+        bool           diagnosticsEnabled;      // Whether advanced diagnostics are enabled
+        bool           stallGuardFilter;        // StallGuard filter state
+        bool           spreadCycleEnabled;      // SpreadCycle mode state
+        bool           microstepInterpolation;  // Microstep interpolation state
     };
 }  // namespace MotionSystem
 
 #endif
+
+/**
+    driver.rms_current(runCurrent);       // RMS current while running
+    driver.ihold(holdCurrent);            // Holding current
+    driver.irun(runCurrent);              // Running current
+    driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
+    driver.TPOWERDOWN(10);                // Motor shutdown time
+    driver.microsteps(16);
+    driver.intpol(microstepInterpolation);
+    driver.TCOOLTHRS(coolStepThreshold);  // CoolStep / StallGuard activation threshold
+    driver.semin(5);                      // CoolStep activation (value > 0)
+    driver.semax(2);                      // Maximum current increase level
+    driver.seup(0b01);                    // Current increase rate
+    driver.sedn(0b01);                    // Current decrease rate
+    driver.sgt(stallGuardThreshold);      // StallGuard sensitivity
+    driver.sfilt(stallGuardFilter);       // Enable pager filter (1 = filter on)
+    driver.TPWMTHRS(0);                   // StealthChop always on
+    driver.pwm_autoscale(true);           // Enable current auto-tuning
+    driver.pwm_autograd(true);            // Enable auto-grading
+    driver.pwm_ofs(36);
+    driver.pwm_grad(14);
+    driver.pwm_freq(1);
+    driver.en_pwm_mode(!spreadCycleEnabled);  // true = StealthChop, false = SpreadCycle
+    driver.toff(5);                           // Chopper activation
+    driver.blank_time(24);
+    driver.hysteresis_start(5);
+    driver.hysteresis_end(3);
+    driver.RAMPMODE(rampMode);
+    driver.VSTART(0);       // Start from zero speed
+    driver.VMAX(maxSpeed);  // Maximum speed
+    driver.VSTOP(10);       // Soft stop, recommended: 5–10
+    driver.AMAX(maxAcceleration);
+    driver.DMAX(maxDeceleration);
+    driver.a1(maxAcceleration);
+    driver.v1(maxSpeed / 2);
+    driver.d1(maxDeceleration);
+ */

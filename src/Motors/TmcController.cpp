@@ -1,7 +1,8 @@
 #include "Motors/TmcController.h"
 
 MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint8_t stepPin, uint8_t dirPin,
-                                           uint8_t enPin, uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin)
+                                           uint8_t enPin, uint8_t mosiPin, uint8_t misoPin, uint8_t sckPin,
+                                           MotorType motorType)
     : driver(csPin, mosiPin, misoPin, sckPin),
       instanceName(name),
       csPin(csPin),
@@ -11,6 +12,7 @@ MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint
       mosiPin(mosiPin),
       misoPin(misoPin),
       sckPin(sckPin),
+      motorType(motorType),
       stepDelay(500),
       lastStepTime(0),
       stepCounter(0),
@@ -34,14 +36,46 @@ MotionSystem::TmcController::TmcController(const char* name, uint8_t csPin, uint
       spreadCycleEnabled(false),
       microstepInterpolation(true)
 {
+    // Set motor-specific default values
+    switch (motorType)
+    {
+        case MotorType::NEMA11_HS13_1004H:
+            runCurrent          = 1000;  // 1.0A
+            holdCurrent         = 500;   // 0.5A
+            maxSpeed            = 5000;
+            maxAcceleration     = 10000;
+            maxDeceleration     = 10000;
+            coolStepThreshold   = 1500;
+            stallGuardThreshold = 15;
+            break;
+
+        case MotorType::P28SHD4611_12SK:
+            runCurrent          = 500;  // 0.5A
+            holdCurrent         = 250;  // 0.25A
+            maxSpeed            = 3000;
+            maxAcceleration     = 6000;
+            maxDeceleration     = 6000;
+            coolStepThreshold   = 800;
+            stallGuardThreshold = 8;
+            break;
+
+        default:
+            Logger::getInstance().logln(F("❌ Unknown motor type."));
+            return;
+    }
 }
 
 void MotionSystem::TmcController::begin()
 {
+    if (motorType == MotorType::UNKNOWN)
+    {
+        return;
+    }
+
     setupPins();
     disableSPI();
     resetDriverState();
-    configureDriver2();
+    configureDriver();
 }
 
 void MotionSystem::TmcController::moveForward()
@@ -619,7 +653,7 @@ void MotionSystem::TmcController::setMaxDeceleration(uint32_t decel)
     driver.d1(decel);
 }
 
-void MotionSystem::TmcController::configureDriver2()
+void MotionSystem::TmcController::configureDriver()
 {
     driver.begin();
     delay(5);
@@ -631,87 +665,91 @@ void MotionSystem::TmcController::configureDriver2()
     gconf |= (1 << 6);  // Enable multi-step filtering
     driver.GCONF(gconf);
     delay(5);
-    driver.rms_current(runCurrent);       // RMS current while running
-    driver.ihold(holdCurrent);            // Holding current
-    driver.irun(runCurrent);              // Running current
-    driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
-    driver.TPOWERDOWN(10);                // Motor shutdown time
-    driver.microsteps(16);
-    driver.intpol(microstepInterpolation);
-    driver.TCOOLTHRS(coolStepThreshold);  // CoolStep / StallGuard activation threshold
-    driver.semin(5);                      // CoolStep activation (value > 0)
-    driver.semax(2);                      // Maximum current increase level
-    driver.seup(0b01);                    // Current increase rate
-    driver.sedn(0b01);                    // Current decrease rate
-    driver.sgt(stallGuardThreshold);      // StallGuard sensitivity
-    driver.sfilt(stallGuardFilter);       // Enable pager filter (1 = filter on)
-    driver.TPWMTHRS(0);                   // StealthChop always on
-    driver.pwm_autoscale(true);           // Enable current auto-tuning
-    driver.pwm_autograd(true);            // Enable auto-grading
-    driver.pwm_ofs(36);
-    driver.pwm_grad(14);
-    driver.pwm_freq(1);
-    driver.en_pwm_mode(!spreadCycleEnabled);  // true = StealthChop, false = SpreadCycle
-    driver.toff(5);                           // Chopper activation
-    driver.blank_time(24);
-    driver.hysteresis_start(5);
-    driver.hysteresis_end(3);
-    driver.RAMPMODE(rampMode);
-    driver.VSTART(0);       // Start from zero speed
-    driver.VMAX(maxSpeed);  // Maximum speed
-    driver.VSTOP(10);       // Soft stop, recommended: 5–10
-    driver.AMAX(maxAcceleration);
-    driver.DMAX(maxDeceleration);
-    driver.a1(maxAcceleration);
-    driver.v1(maxSpeed / 2);
-    driver.d1(maxDeceleration);
-    enableDriver(true);
-    delay(5);
-}
 
-void MotionSystem::TmcController::configureDriver()
-{
-    driver.begin();
-    delay(5);
-    uint32_t gconf = 0;
-    gconf |= (1 << 0);  // Enable internal RSense
-    gconf |= (1 << 2);  // Enable stealthChop
-    gconf |= (1 << 3);  // Enable microstep interpolation
-    gconf |= (1 << 4);  // Enable double edge step
-    gconf |= (1 << 6);  // Enable multistep filtering
-    driver.GCONF(gconf);
-    delay(5);
-    driver.rms_current(runCurrent);
-    driver.ihold(holdCurrent);
-    driver.irun(runCurrent);
-    driver.iholddelay(currentHoldDelay);
-    driver.TPOWERDOWN(10);
-    driver.microsteps(16);
-    driver.intpol(microstepInterpolation);
-    driver.TCOOLTHRS(coolStepThreshold);
-    driver.sgt(stallGuardThreshold);
-    driver.sfilt(stallGuardFilter);
-    driver.sgt(stallGuardThreshold);
-    driver.TPWMTHRS(0);  // Enable stealthChop by default
-    driver.pwm_autoscale(true);
-    driver.pwm_autograd(true);
-    driver.pwm_ofs(36);
-    driver.pwm_grad(14);
-    driver.pwm_freq(1);
-    driver.en_pwm_mode(!spreadCycleEnabled);  // 0 for spread cycle, 1 for stealthChop
-    driver.toff(5);
-    driver.blank_time(24);
-    driver.hysteresis_start(5);
-    driver.hysteresis_end(3);
-    driver.RAMPMODE(rampMode);
-    driver.VMAX(maxSpeed);
-    driver.AMAX(maxAcceleration);
-    driver.DMAX(maxDeceleration);
-    driver.a1(maxAcceleration);
-    driver.v1(maxSpeed / 2);
-    driver.d1(maxDeceleration);
-    driver.VSTART(0);
-    driver.VSTOP(5);
+    // Motor-specific configuration
+    switch (motorType)
+    {
+        case MotorType::NEMA11_HS13_1004H:
+            // Configure for NEMA11 motor
+            driver.rms_current(runCurrent);       // 1.0A RMS current
+            driver.ihold(holdCurrent);            // 0.5A holding current
+            driver.irun(runCurrent);              // 1.0A running current
+            driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
+            driver.TPOWERDOWN(10);                // Motor shutdown time
+            driver.microsteps(16);                // 16 microsteps for smooth operation
+            driver.intpol(microstepInterpolation);
+            driver.TCOOLTHRS(coolStepThreshold);  // CoolStep activation threshold
+            driver.semin(5);                      // CoolStep activation
+            driver.semax(2);                      // Maximum current increase level
+            driver.seup(0b01);                    // Current increase rate
+            driver.sedn(0b01);                    // Current decrease rate
+            driver.sgt(stallGuardThreshold);      // StallGuard sensitivity
+            driver.sfilt(stallGuardFilter);       // Enable pager filter
+            driver.TPWMTHRS(0);                   // StealthChop always on
+            driver.pwm_autoscale(true);           // Enable current auto-tuning
+            driver.pwm_autograd(true);            // Enable auto-grading
+            driver.pwm_ofs(36);
+            driver.pwm_grad(14);
+            driver.pwm_freq(1);
+            driver.en_pwm_mode(!spreadCycleEnabled);
+            driver.toff(5);  // Chopper activation
+            driver.blank_time(24);
+            driver.hysteresis_start(5);
+            driver.hysteresis_end(3);
+            driver.RAMPMODE(rampMode);
+            driver.VSTART(0);       // Start from zero speed
+            driver.VMAX(maxSpeed);  // Maximum speed
+            driver.VSTOP(10);       // Soft stop
+            driver.AMAX(maxAcceleration);
+            driver.DMAX(maxDeceleration);
+            driver.a1(maxAcceleration);
+            driver.v1(maxSpeed / 2);
+            driver.d1(maxDeceleration);
+            break;
+
+        case MotorType::P28SHD4611_12SK:
+            // Configure for P28SHD4611 motor
+            driver.rms_current(runCurrent);       // 0.5A RMS current
+            driver.ihold(holdCurrent);            // 0.25A holding current
+            driver.irun(runCurrent);              // 0.5A running current
+            driver.iholddelay(currentHoldDelay);  // Delay to transition to holding current
+            driver.TPOWERDOWN(8);                 // Shorter shutdown time for smaller motor
+            driver.microsteps(16);                // 16 microsteps for smooth operation
+            driver.intpol(microstepInterpolation);
+            driver.TCOOLTHRS(coolStepThreshold);  // Lower CoolStep threshold
+            driver.semin(4);                      // Lower CoolStep activation
+            driver.semax(1);                      // Lower maximum current increase
+            driver.seup(0b01);                    // Current increase rate
+            driver.sedn(0b01);                    // Current decrease rate
+            driver.sgt(stallGuardThreshold);      // Lower StallGuard sensitivity
+            driver.sfilt(stallGuardFilter);       // Enable pager filter
+            driver.TPWMTHRS(0);                   // StealthChop always on
+            driver.pwm_autoscale(true);           // Enable current auto-tuning
+            driver.pwm_autograd(true);            // Enable auto-grading
+            driver.pwm_ofs(30);                   // Lower PWM offset
+            driver.pwm_grad(12);                  // Lower PWM gradient
+            driver.pwm_freq(1);
+            driver.en_pwm_mode(!spreadCycleEnabled);
+            driver.toff(4);              // Shorter chopper off time
+            driver.blank_time(20);       // Shorter blank time
+            driver.hysteresis_start(4);  // Lower hysteresis start
+            driver.hysteresis_end(2);    // Lower hysteresis end
+            driver.RAMPMODE(rampMode);
+            driver.VSTART(0);       // Start from zero speed
+            driver.VMAX(maxSpeed);  // Lower maximum speed
+            driver.VSTOP(8);        // Shorter soft stop
+            driver.AMAX(maxAcceleration);
+            driver.DMAX(maxDeceleration);
+            driver.a1(maxAcceleration);
+            driver.v1(maxSpeed / 2);
+            driver.d1(maxDeceleration);
+            break;
+
+        default:
+            Logger::getInstance().logln(F("❌ Unknown motor type."));
+            return;
+    }
+
     enableDriver(true);
     delay(5);
 }
@@ -742,7 +780,7 @@ bool MotionSystem::TmcController::checkAndReinitializeDriver()
         enableDriver(false);
         disableSPI();
         enableSPI();
-        configureDriver2();
+        configureDriver();
         return true;
     }
 
