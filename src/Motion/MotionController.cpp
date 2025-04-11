@@ -2,6 +2,8 @@
 
 namespace MotionSystem
 {
+    using namespace MotionSystem::Types;
+
     MotionController::MotionController(EncoderInterface* encoder, TmcController* motor, PIDController* pidController,
                                        LimitSwitch* limitSwitch, StatusReporter* statusReporter)
         : encoder(encoder),
@@ -31,14 +33,14 @@ namespace MotionSystem
         pidController->init();
         limitSwitch->init();
         lastStepTime                           = esp_timer_get_time();
-        Types::EncoderPosition initialPosition = encoder->readPosition();
+        EncoderPosition initialPosition = encoder->readPosition();
         statusReporter->setAbsoluteZeroPosition(initialPosition);
         statusReporter->setRelativeZeroPosition(initialPosition);
         pidController->setTargetPosition(initialPosition);
         Logger::getInstance().logln(F("Motion controller initialized"));
     }
 
-    void MotionController::moveToPosition(Types::MicronPosition positionMicrons)
+    void MotionController::moveToPosition(MicronPosition positionMicrons)
     {
         if (positionMicrons < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
             positionMicrons > Config::System::REL_TRAVEL_LIMIT_MICRONS)
@@ -48,17 +50,17 @@ namespace MotionSystem
             return;
         }
 
-        Types::EncoderPosition targetPosition = statusReporter->getRelativeZeroPosition() +
+        EncoderPosition targetPosition = statusReporter->getRelativeZeroPosition() +
                                                 MotionSystem::Utils::getInstance().micronsToEncCounts(positionMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage, positionMicrons, (long)targetPosition);
         Logger::getInstance().logln(buffer);
     }
 
-    void MotionController::moveRelative(Types::MicronPosition distanceMicrons)
+    void MotionController::moveRelative(MicronPosition distanceMicrons)
     {
-        Types::MicronPosition currentRelPos = statusReporter->getRelativePosition();
-        Types::MicronPosition newRelPos     = currentRelPos + distanceMicrons;
+        MicronPosition currentRelPos = statusReporter->getRelativePosition();
+        MicronPosition newRelPos     = currentRelPos + distanceMicrons;
         if (newRelPos < -Config::System::REL_TRAVEL_LIMIT_MICRONS ||
             newRelPos > Config::System::REL_TRAVEL_LIMIT_MICRONS)
         {
@@ -67,8 +69,8 @@ namespace MotionSystem
             return;
         }
 
-        Types::EncoderPosition currentPosition = encoder->readPosition();
-        Types::EncoderPosition targetPosition =
+        EncoderPosition currentPosition = encoder->readPosition();
+        EncoderPosition targetPosition =
             currentPosition + MotionSystem::Utils::getInstance().micronsToEncCounts(distanceMicrons);
         pidController->setTargetPosition(targetPosition);
         snprintf_P(buffer, sizeof(buffer), movingMessage3, distanceMicrons,
@@ -78,13 +80,13 @@ namespace MotionSystem
 
     bool MotionController::waitForMotionComplete(float toleranceMicrons, uint32_t timeoutMs)
     {
-        Types::EncoderPosition toleranceCounts =
+        EncoderPosition toleranceCounts =
             MotionSystem::Utils::getInstance().micronsToEncCounts(toleranceMicrons);
         uint32_t startTime = millis();
         while (millis() - startTime < timeoutMs)
         {
-            Types::EncoderPosition currentPosition = encoder->readPosition();
-            Types::EncoderPosition positionError   = abs(pidController->getTargetPosition() - currentPosition);
+            EncoderPosition currentPosition = encoder->readPosition();
+            EncoderPosition positionError   = abs(pidController->getTargetPosition() - currentPosition);
             if (positionError <= toleranceCounts && abs(currentSpeed) < 10)
             {
                 return true;  // Motion complete
@@ -98,7 +100,7 @@ namespace MotionSystem
 
     void MotionController::resetRelativeZero()
     {
-        Types::EncoderPosition currentPosition = encoder->readPosition();
+        EncoderPosition currentPosition = encoder->readPosition();
         statusReporter->setRelativeZeroPosition(currentPosition);
         Logger::getInstance().logln(F("Relative zero position reset at current position"));
     }
@@ -170,12 +172,12 @@ namespace MotionSystem
         Logger::getInstance().logln(F("Motion control task started"));
     }
 
-    void MotionController::setCurrentSpeed(Types::Speed speed)
+    void MotionController::setCurrentSpeed(Speed speed)
     {
         currentSpeed = speed;
     }
 
-    Types::Speed MotionController::getCurrentSpeed() const
+    Speed MotionController::getCurrentSpeed() const
     {
         return currentSpeed;
     }

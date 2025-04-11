@@ -2,6 +2,8 @@
 
 namespace MotionSystem
 {
+    using namespace MotionSystem::Types;
+
     PIDController::PIDController(EncoderInterface* encoder)
         : encoder(encoder),
           targetPosition(0),
@@ -27,6 +29,7 @@ namespace MotionSystem
     {
         lastPidTime         = esp_timer_get_time();
         lastEncoderPosition = encoder->readPosition();
+
         Logger::getInstance().logln(F("PID controller initialized with parameters KP:"));
         Logger::getInstance().logln(String(Config::PID::KP));
         Logger::getInstance().logln(F("KI:"));
@@ -35,25 +38,27 @@ namespace MotionSystem
         Logger::getInstance().logln(String(Config::PID::KD));
     }
 
-    void PIDController::setTargetPosition(Types::EncoderPosition targetPosition)
+    void PIDController::setTargetPosition(EncoderPosition targetPosition)
     {
         this->targetPosition = targetPosition;
     }
 
-    Types::EncoderPosition PIDController::getTargetPosition() const
+    EncoderPosition PIDController::getTargetPosition() const
     {
         return targetPosition;
     }
 
-    int32_t PIDController::update()
+    EncoderPosition PIDController::update()
     {
-        Types::EncoderPosition currentPosition = encoder->readPosition();
-        float                  error           = targetPosition - currentPosition;
-        uint64_t               now             = esp_timer_get_time();
-        float                  dt              = (now - lastPidTime) / 1000000.0;  // Convert to seconds
-        lastPidTime                            = now;
-        float proportional                     = Config::PID::KP * error;
+        EncoderPosition currentPosition = encoder->readPosition();
+        float           error           = targetPosition - currentPosition;
+        uint64_t        now             = esp_timer_get_time();
+        float           dt              = (now - lastPidTime) / 1000000.0;  // Convert to seconds
+        lastPidTime                     = now;
+        float proportional              = Config::PID::KP * error;
+
         integral += Config::PID::KI * error * dt;
+
         if (integral > Config::PID::MAX_INTEGRAL)
         {
             integral = Config::PID::MAX_INTEGRAL;
@@ -65,6 +70,7 @@ namespace MotionSystem
         }
 
         float derivative = 0;
+
         if (dt > 0)
         {
             derivative = Config::PID::KD * (error - lastError) / dt;
@@ -73,6 +79,7 @@ namespace MotionSystem
         output              = proportional + integral + derivative;
         lastError           = error;
         lastEncoderPosition = currentPosition;
+
         return output;
     }
 
@@ -82,6 +89,7 @@ namespace MotionSystem
         controller->lastPidTime        = esp_timer_get_time();
         TickType_t       xLastWakeTime = xTaskGetTickCount();
         const TickType_t xFrequency    = 1000 / Config::Motion::PID_UPDATE_FREQ;  // Convert to milliseconds
+
         while (true)
         {
             controller->update();
@@ -93,6 +101,7 @@ namespace MotionSystem
     {
         xTaskCreatePinnedToCore(pidTask, "PID Control", Config::Tasks::PID_TASK_STACK_SIZE, this,
                                 Config::Tasks::PID_TASK_PRIORITY, &taskHandle, Config::Tasks::PID_TASK_CORE);
+
         Logger::getInstance().logln(F("PID control task started"));
     }
 
