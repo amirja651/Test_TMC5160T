@@ -37,6 +37,14 @@ namespace MotionSystem
     {
         encoder->begin();
         motor->begin();
+
+        // Test SPI communication first
+        if (!motor->testCommunication(false))
+        {
+            handleError(MotionError::SPI_ERROR);
+            return;
+        }
+
         pidController->init();
 
         if (limitSwitch != nullptr)
@@ -186,6 +194,12 @@ namespace MotionSystem
 
             case MotionError::MOTOR_ERROR:
                 Logger::getInstance().logln(F("Motor error detected"));
+                // Attempt to reset motor
+                motor->resetDriverState();
+                break;
+
+            case MotionError::SPI_ERROR:
+                Logger::getInstance().logln(F("SPI error detected"));
                 // Attempt to reset motor
                 motor->resetDriverState();
                 break;

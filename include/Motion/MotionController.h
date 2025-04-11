@@ -24,7 +24,8 @@ namespace MotionSystem
         LIMIT_SWITCH_TRIGGERED,
         ENCODER_ERROR,
         MOTOR_ERROR,
-        PID_ERROR
+        PID_ERROR,
+        SPI_ERROR
     };
 
     namespace Motion
