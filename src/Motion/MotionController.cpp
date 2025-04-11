@@ -119,15 +119,6 @@ namespace MotionSystem
 
         while (true)
         {
-            Types::MicronPosition relPosition = controller->getRelativePosition();
-            Types::MicronPosition relTarget   = Utils::getInstance().countsToMicrons(
-                controller->pidController->getTargetPosition() - controller->relativeZeroPosition);
-
-            if (abs(relPosition - relTarget) > 0.2)
-            {
-                controller->printStatusUpdate();
-            }
-
             if (controller->limitSwitch != nullptr && controller->limitSwitch->isEmergencyStop())
             {
                 controller->currentSpeed = 0;
@@ -136,6 +127,15 @@ namespace MotionSystem
                 Logger::getInstance().logln(F(" - EMERGENCY STOP: Limit switch triggered!"));
                 vTaskDelay(100);  // Give time for other tasks
                 continue;
+            }
+
+            Types::MicronPosition relPosition = controller->getRelativePosition();
+            Types::MicronPosition relTarget   = Utils::getInstance().countsToMicrons(
+                controller->pidController->getTargetPosition() - controller->relativeZeroPosition);
+
+            if (abs(relPosition - relTarget) > 0.2)
+            {
+                controller->printStatusUpdate();
             }
 
             int32_t pidOutput      = controller->pidController->update();
