@@ -28,41 +28,18 @@
 
 using namespace MotionSystem::Types;
 
+auto& commandHandler = MotionSystem::CommandHandler::getInstance();
+
 // MotionSystem::SimpleController motor;
 // MotionSystem::LimitSwitch      limitSwitch;
 //      MotionSystem::PIDController    pidController(pwmEncoders[0]);
 // MotionSystem::StatusReporter   statusReporter(diffEncoder, &pidController, &limitSwitch);
 // MotionSystem::MotionController motionController(pwmEncoders[0], &motors[0], &pidController, &limitSwitch,
 //                                                 &statusReporter);
-TaskHandle_t serialTaskHandle       = NULL;
 TaskHandle_t motorUpdateTaskHandle0 = NULL;
 TaskHandle_t motorUpdateTaskHandle1 = NULL;
 TaskHandle_t motorUpdateTaskHandle2 = NULL;
 TaskHandle_t motorUpdateTaskHandle3 = NULL;
-
-void serialTask(void* pvParameters)
-{
-    while (1)
-    {
-        if (Serial.available() > 0)
-        {
-            String command = Serial.readStringUntil('\n');
-
-            if (command.length() > 10)
-            {
-                MotionSystem::Logger::getInstance().log(F("❌ Invalid command. Use h/? for help"));
-                continue;
-            }
-
-            command.trim();
-            command.toUpperCase();
-
-            // MotionSystem::CommandHandler::getInstance().processCommand(command);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
 
 void motorUpdateTask0(void* pvParameters)
 {
@@ -114,12 +91,7 @@ void motorUpdateTask3(void* pvParameters)
 
 void setup()
 {
-    Serial.begin(MotionSystem::Config::System::SERIAL_BAUD_RATE);
-    delay(MotionSystem::Config::System::STARTUP_DELAY_MS);
-    while (!Serial)
-    {
-        delay(10);
-    }
+    commandHandler.beginSerial();
 
     // Initialize the logger
     MotionSystem::Logger::getInstance().begin();
@@ -132,7 +104,6 @@ void setup()
     initializeMotionSystem();
 
     MotionSystem::CommandHandler::getInstance().printCommandGuide();
-    xTaskCreate(serialTask, "SerialTask", 4096, NULL, 2, &serialTaskHandle);
     xTaskCreate(motorUpdateTask0, "MotorUpdateTask0", 4096, NULL, 3, &motorUpdateTaskHandle0);
     xTaskCreate(motorUpdateTask1, "MotorUpdateTask1", 4096, NULL, 3, &motorUpdateTaskHandle1);
     xTaskCreate(motorUpdateTask2, "MotorUpdateTask2", 4096, NULL, 3, &motorUpdateTaskHandle2);

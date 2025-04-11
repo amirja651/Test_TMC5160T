@@ -17,20 +17,6 @@ namespace MotionSystem
 
     const size_t CommandHandler::NUM_COMMANDS = sizeof(commands) / sizeof(commands[0]);
 
-    CommandHandler* CommandHandler::instance = nullptr;
-
-    CommandHandler& CommandHandler::getInstance()
-    {
-        if (!instance)
-        {
-            instance = new CommandHandler();
-        }
-
-        return *instance;
-    }
-
-    CommandHandler::CommandHandler() {}
-
     void CommandHandler::printCommandGuide()
     {
         Logger::getInstance().logln("\n ==================== Available Commands ====================");
@@ -73,7 +59,123 @@ namespace MotionSystem
         return (motorNum >= 1 && motorNum <= Config::TMC5160T_Driver::NUM_MOTORS);
     }
 
-    void CommandHandler::executeMotorCommand(int motorNum, CommandType type, float position, String fullCommand)
+    bool CommandHandler::validateCommandFormat(const String& cmd) const
+    {
+        if (cmd.isEmpty())
+            return false;
+
+        int spaceCount = 0;
+        for (size_t i = 0; i < cmd.length(); i++)
+        {
+            if (cmd.charAt(i) == ' ')
+                spaceCount++;
+        }
+
+        return spaceCount == 0 || spaceCount == 2;
+    }
+
+    bool CommandHandler::isValidMotorFormat(const String& motor) const
+    {
+        return motor.length() == 2 && motor.charAt(0) == 'm' && isDigit(motor.charAt(1));
+    }
+
+    bool CommandHandler::isValidParameterFormat(const String& param) const
+    {
+        return Utils::getInstance().isNumber(param);
+    }
+
+    CommandResult CommandHandler::handleInvalidCommand(const String& cmd, CommandStatus status)
+    {
+        String errorMessage;
+        switch (status)
+        {
+            case CommandStatus::INVALID_COMMAND:
+                errorMessage = "❌ Invalid command format. Use h/? for help";
+                break;
+            case CommandStatus::INVALID_MOTOR_NUMBER:
+                errorMessage = "❌ Invalid motor number. Valid range: 1-" + String(Config::TMC5160T_Driver::NUM_MOTORS);
+                break;
+            case CommandStatus::INVALID_PARAMETER:
+                errorMessage = "❌ Invalid parameter format";
+                break;
+            case CommandStatus::MOTOR_COMMUNICATION_FAILED:
+                errorMessage = "❌ Motor communication failed";
+                break;
+            default:
+                errorMessage = "❌ Unknown error occurred";
+                break;
+        }
+
+        Logger::getInstance().log(errorMessage);
+        if (!cmd.isEmpty())
+        {
+            Logger::getInstance().log(F(": "));
+            Logger::getInstance().logln(cmd);
+        }
+
+        return CommandResult{status, errorMessage, false};
+    }
+
+    CommandResult CommandHandler::processCommand(String cmd)
+    {
+        if (!validateCommandFormat(cmd))
+        {
+            return handleInvalidCommand(cmd, CommandStatus::INVALID_COMMAND);
+        }
+
+        int    spaceIndex1 = cmd.indexOf(" ");
+        int    spaceIndex2 = cmd.indexOf(" ", spaceIndex1 + 1);
+        String firstWord   = cmd.substring(0, spaceIndex1);
+        String secondWord  = (spaceIndex1 != -1) ? cmd.substring(spaceIndex1 + 1, spaceIndex2) : "";
+        String thirdWord   = (spaceIndex2 != -1) ? cmd.substring(spaceIndex2 + 1) : "";
+
+        const Command* command = findCommand(firstWord);
+        if (!command)
+        {
+            return handleInvalidCommand(cmd, CommandStatus::INVALID_COMMAND);
+        }
+
+        if (secondWord.isEmpty() && thirdWord.isEmpty())
+        {
+            if (command->type == CommandType::HELP)
+            {
+                printCommandGuide();
+                return CommandResult{CommandStatus::SUCCESS, "Help displayed", true};
+            }
+            return handleInvalidCommand(cmd, CommandStatus::INVALID_COMMAND);
+        }
+
+        if (!secondWord.isEmpty() && thirdWord.isEmpty())
+        {
+            return handleInvalidCommand(cmd, CommandStatus::INVALID_COMMAND);
+        }
+
+        if (!secondWord.isEmpty() && !thirdWord.isEmpty())
+        {
+            if (!isValidParameterFormat(secondWord))
+            {
+                return handleInvalidCommand(cmd, CommandStatus::INVALID_PARAMETER);
+            }
+
+            if (!isValidMotorFormat(thirdWord))
+            {
+                return handleInvalidCommand(cmd, CommandStatus::INVALID_MOTOR_NUMBER);
+            }
+
+            int motorNum = thirdWord.charAt(1) - '0';
+            if (!validateMotorNumber(motorNum))
+            {
+                return handleInvalidCommand(cmd, CommandStatus::INVALID_MOTOR_NUMBER);
+            }
+
+            return executeMotorCommand(motorNum, command->type, secondWord.toFloat(), cmd);
+        }
+
+        return handleInvalidCommand(cmd, CommandStatus::INVALID_COMMAND);
+    }
+
+    CommandResult CommandHandler::executeMotorCommand(int motorNum, CommandType type, float position,
+                                                      String fullCommand)
     {
         if (motorNum == 100 || motors[motorNum - 1].testCommunication(false))
         {
@@ -165,93 +267,69 @@ namespace MotionSystem
                     break;
                 case CommandType::INVALID:
                 default:
-                    Logger::getInstance().log(F("❌ Invalid command. Use h/? for help: "));
-                    Logger::getInstance().logln(fullCommand);
-                    break;
+                    return handleInvalidCommand(fullCommand, CommandStatus::INVALID_COMMAND);
             }
+            return CommandResult{CommandStatus::SUCCESS, "Command executed successfully", true};
         }
-
         else
         {
-            Logger::getInstance().log(F("\nMotor "));
-            Logger::getInstance().log(String(motorNum));
-            Logger::getInstance().logln(F(" communication failed ❌ "));
+            return handleInvalidCommand(fullCommand, CommandStatus::MOTOR_COMMUNICATION_FAILED);
         }
     }
 
-    bool CommandHandler::isValidMotorCommand(String cmd) const
+    CommandResult CommandHandler::testCommand(const String& cmd)
     {
-        for (size_t i = 0; i < NUM_COMMANDS; i++)
+        CommandResult result = processCommand(cmd);
+        Logger::getInstance().log(F("Test result: "));
+        Logger::getInstance().logln(result.message);
+        return result;
+    }
+
+    void CommandHandler::beginSerial(uint32_t baudRate)
+    {
+        Serial.begin(baudRate);
+        delay(Config::System::STARTUP_DELAY_MS);
+        while (!Serial)
         {
-            if (cmd.equalsIgnoreCase(commands[i].key))
-            {
-                return true;
-            }
+            delay(10);
         }
 
+        // Create serial task
+        xTaskCreate(serialTask, "SerialTask", 4096, this, 2, &serialTaskHandle);
+    }
+
+    void CommandHandler::serialTask(void* pvParameters)
+    {
+        CommandHandler* handler = static_cast<CommandHandler*>(pvParameters);
+        while (1)
+        {
+            handler->processSerialInput();
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+
+    bool CommandHandler::processSerialInput()
+    {
+        if (Serial.available() > 0)
+        {
+            String command = Serial.readStringUntil('\n');
+            command.trim();
+
+            if (command.length() > 10)
+            {
+                Logger::getInstance().log(F("❌ Invalid command. Use h/? for help"));
+                return false;
+            }
+
+            processSerialCommand(command);
+            return true;
+        }
         return false;
     }
 
-    void CommandHandler::processCommand(String cmd)
+    void CommandHandler::processSerialCommand(const String& command)
     {
-        int            spaceIndex1 = cmd.indexOf(" ");
-        int            spaceIndex2 = cmd.indexOf(" ", spaceIndex1 + 1);
-        String         firstWord   = cmd.substring(0, spaceIndex1);
-        String         secondWord  = (spaceIndex1 != -1) ? cmd.substring(spaceIndex1 + 1, spaceIndex2) : "";
-        String         thirdWord   = (spaceIndex2 != -1) ? cmd.substring(spaceIndex2 + 1) : "";
-        const Command* command     = findCommand(firstWord);
-
-        if (secondWord == "" && thirdWord == "")
-        {
-            if (!command)
-            {
-                executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-                return;
-            }
-
-            if (command->type == CommandType::HELP)
-            {
-                printCommandGuide();
-            }
-        }
-
-        else if (secondWord != "" && thirdWord == "")
-        {
-            executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-            return;
-        }
-
-        else if (secondWord != "" && thirdWord != "")
-        {
-            if (Utils::getInstance().isNumber(secondWord))
-            {
-                if (thirdWord.length() == 2 && thirdWord.charAt(0) == 'm' && isDigit(thirdWord.charAt(1)))
-                {
-                    int motorNum = thirdWord.charAt(1) - '0';
-
-                    if (!validateMotorNumber(motorNum))
-                    {
-                        executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-                        return;
-                    }
-
-                    executeMotorCommand(motorNum, command->type, secondWord.toFloat());
-                }
-                else
-                {
-                    executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-                    return;
-                }
-            }
-            else
-            {
-                executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-                return;
-            }
-        }
-        else
-        {
-            executeMotorCommand(100, CommandType::INVALID, 0, cmd);
-        }
+        CommandResult result = processCommand(command);
+        Logger::getInstance().logln(result.message);
     }
 }  // namespace MotionSystem
