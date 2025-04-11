@@ -8,27 +8,29 @@
 
 namespace MotionSystem
 {
+    using namespace MotionSystem::Types;
+
     class PIDController
     {
     public:
         PIDController(EncoderInterface* encoder);
         ~PIDController();
-        void                   init();
-        void                   setTargetPosition(Types::EncoderPosition targetPosition);
-        Types::EncoderPosition getTargetPosition() const;
-        int32_t                update();
-        static void            pidTask(void* parameter);
-        void                   startTask();
+        void            init();
+        void            setTargetPosition(Types::EncoderPosition targetPosition);
+        EncoderPosition getTargetPosition() const;
+        EncoderPosition update();
+        static void     pidTask(void* parameter);
+        void            startTask();
 
     private:
-        EncoderInterface*      encoder;
-        Types::EncoderPosition targetPosition;
-        Types::EncoderPosition lastEncoderPosition;
-        float                  integral;
-        float                  lastError;
-        int32_t                output;
-        uint64_t               lastPidTime;
-        TaskHandle_t           taskHandle;
+        EncoderInterface* encoder;
+        EncoderPosition   targetPosition;
+        EncoderPosition   lastEncoderPosition;
+        float             integral;
+        float             lastError;
+        EncoderPosition   output;
+        Timestamp         lastPidTime;
+        TaskHandle_t      taskHandle;
     };
 }  // namespace MotionSystem
 

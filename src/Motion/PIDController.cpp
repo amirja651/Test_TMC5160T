@@ -2,8 +2,6 @@
 
 namespace MotionSystem
 {
-    using namespace MotionSystem::Types;
-
     PIDController::PIDController(EncoderInterface* encoder)
         : encoder(encoder),
           targetPosition(0),

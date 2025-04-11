@@ -8,6 +8,7 @@ namespace MotionSystem
 {  // namespace ESP32Pins
     namespace Types
     {
+        using Timestamp        = uint64_t;
         using EncoderPosition  = int32_t;
         using MicronPosition   = float;
         using PixelPosition    = float;
