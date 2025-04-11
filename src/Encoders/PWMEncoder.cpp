@@ -1,28 +1,30 @@
 #include "Encoders/PWMEncoder.h"
-#include "Encoders/EncoderInterruptManager.h"
 
 namespace MotionSystem
 {
     PWMEncoder::PWMEncoder(const EncoderConfig& config)
-        : config(config),
+        : encoderConfig(config),
           position(0),
+          overflowCount(0),
           pulseStartTime(0),
           currentPulseWidth(0),
           newPulseAvailable(false),
-          lastUpdateTime(0)
+          lastUpdateTime(0),
+          gpioMask(1ULL << config.signalPin)
     {
     }
 
     PWMEncoder::~PWMEncoder()
     {
-        EncoderInterruptManager::getInstance().freeInterrupt(config.interruptPin);
+        EncoderInterruptManager::getInstance().freeInterrupt(encoderConfig.interruptPin);
     }
 
     void PWMEncoder::begin()
     {
-        pinMode(config.signalPin, INPUT);
+        pinMode(encoderConfig.signalPin, INPUT);
 
-        if (!EncoderInterruptManager::getInstance().allocateInterrupt(config.interruptPin, handleInterrupt, this))
+        if (!EncoderInterruptManager::getInstance().allocateInterrupt(encoderConfig.interruptPin, handleInterrupt,
+                                                                      this))
         {
             // Handle error - interrupt allocation failed
             return;
@@ -33,8 +35,8 @@ namespace MotionSystem
 
     void PWMEncoder::resetPosition()
     {
-        position      = 0;
-        overflowCount = 0;
+        position.store(0);
+        overflowCount.store(0);
     }
 
     Types::EncoderPosition PWMEncoder::readPosition()
@@ -43,7 +45,12 @@ namespace MotionSystem
         {
             measurePulse();
         }
-        return position;
+        return position.load();
+    }
+
+    uint8_t PWMEncoder::readPinFast() const
+    {
+        return (GPIO.in & gpioMask) ? 1 : 0;
     }
 
     void IRAM_ATTR PWMEncoder::handleInterrupt(void* arg)
@@ -51,7 +58,7 @@ namespace MotionSystem
         PWMEncoder*   encoder     = static_cast<PWMEncoder*>(arg);
         unsigned long currentTime = micros();
 
-        if (digitalRead(encoder->config.signalPin) == HIGH)
+        if (encoder->readPinFast())
         {
             encoder->pulseStartTime = currentTime;
         }
@@ -68,12 +75,12 @@ namespace MotionSystem
         {
             float degrees = (currentPulseWidth - MIN_PULSE_WIDTH) * (360.0f / (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH));
 
-            if (config.invertDirection)
+            if (encoderConfig.invertDirection)
             {
                 degrees = 360.0f - degrees;
             }
 
-            position = static_cast<Types::EncoderPosition>((degrees / 360.0f) * config.countsPerRevolution);
+            position.store(static_cast<Types::EncoderPosition>((degrees / 360.0f) * encoderConfig.countsPerRevolution));
         }
 
         newPulseAvailable = false;

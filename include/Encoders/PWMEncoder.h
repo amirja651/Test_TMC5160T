@@ -1,10 +1,12 @@
 #ifndef PWM_ENCODER_H
 #define PWM_ENCODER_H
 
+#include <atomic>
 #include "Config.h"
 #include "EncoderConfig.h"
 #include "EncoderInterface.h"
 #include "EncoderInterruptManager.h"
+#include "Encoders/EncoderInterruptManager.h"
 
 namespace MotionSystem
 {
@@ -21,14 +23,16 @@ namespace MotionSystem
     private:
         static void IRAM_ATTR handleInterrupt(void* arg);
         void                  measurePulse();
+        uint8_t               readPinFast() const;
 
-        EncoderConfig                   config;
-        volatile Types::EncoderPosition position;
-        volatile int32_t                overflowCount;
-        volatile unsigned long          pulseStartTime;
-        volatile unsigned long          currentPulseWidth;
-        volatile bool                   newPulseAvailable;
-        unsigned long                   lastUpdateTime;
+        EncoderConfig                       encoderConfig;
+        std::atomic<Types::EncoderPosition> position;
+        std::atomic<int32_t>                overflowCount;
+        volatile unsigned long              pulseStartTime;
+        volatile unsigned long              currentPulseWidth;
+        volatile bool                       newPulseAvailable;
+        unsigned long                       lastUpdateTime;
+        uint32_t                            gpioMask;  // For fast pin reading
 
         static constexpr uint32_t MIN_PULSE_WIDTH   = 5;
         static constexpr uint32_t MAX_PULSE_WIDTH   = 3935;
