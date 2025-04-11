@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "Config.h"
+
 #include "Encoders/EncoderFactory.h"
 #include "Encoders/PWMEncoder.h"
 #include "Helper/Logger.h"

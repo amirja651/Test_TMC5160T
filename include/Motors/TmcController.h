@@ -2,7 +2,7 @@
 #define MOTOR_CONTROLLER_H
 
 #include <TMCStepper.h>
-#include "Config.h"
+
 #include "Helper/Pins.h"
 #include "Helper/Types.h"
 

@@ -1,5 +1,5 @@
 #include "Encoders/PWMEncoder.h"
-
+#include "Encoders/EncoderInterruptManager.h"
 namespace MotionSystem
 {
     PWMEncoder::PWMEncoder(const EncoderConfig& config)

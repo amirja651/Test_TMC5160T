@@ -1,7 +1,6 @@
 #ifndef ENCODER_INTERFACE_H
 #define ENCODER_INTERFACE_H
 
-#include "Config.h"
 #include "Helper/Types.h"
 
 namespace MotionSystem

@@ -2,11 +2,8 @@
 #define PWM_ENCODER_H
 
 #include <atomic>
-#include "Config.h"
 #include "EncoderConfig.h"
 #include "EncoderInterface.h"
-#include "EncoderInterruptManager.h"
-#include "Encoders/EncoderInterruptManager.h"
 #include "Helper/Types.h"
 
 namespace MotionSystem

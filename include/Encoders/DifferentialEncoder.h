@@ -2,10 +2,8 @@
 #define DIFFERENTIAL_ENCODER_H
 
 #include <driver/pcnt.h>
-#include "Config.h"
 #include "EncoderConfig.h"
 #include "EncoderInterface.h"
-#include "EncoderInterruptManager.h"
 #include "Helper/Types.h"
 
 namespace MotionSystem

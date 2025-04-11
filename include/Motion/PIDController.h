@@ -1,7 +1,6 @@
 #ifndef PID_CONTROLLER_H
 #define PID_CONTROLLER_H
 
-#include "Config.h"
 #include "Encoders/EncoderInterface.h"
 #include "Helper/Logger.h"
 #include "Helper/Types.h"

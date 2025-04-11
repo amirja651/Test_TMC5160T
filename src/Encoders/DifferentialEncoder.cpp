@@ -1,5 +1,4 @@
 #include "Encoders/DifferentialEncoder.h"
-#include "Encoders/EncoderInterruptManager.h"
 
 namespace MotionSystem
 {
